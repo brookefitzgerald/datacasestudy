@@ -21,7 +21,6 @@ fullTest <- read.csv("test.csv")
 
 ## Exploratory Data Analysis
 
-
 ```{r pressure, echo=FALSE}
 summary(fullTrain)
 ggplot(fullTrain, aes(x=Neighborhood,y=SalePrice))+
@@ -30,6 +29,9 @@ ggplot(fullTrain, aes(x=Neighborhood,y=SalePrice))+
        theme(axis.text.x = element_text(angle = 90, hjust = 1))
 options(scipen=5)
 hist(fullTrain$SalePrice, xlab = "Sale Price", main = "Histogram of Sale Price")
+```
+```{r}
+
 ```
 
 
