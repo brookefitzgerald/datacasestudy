@@ -10,6 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 library(gpairs)
 library(ggthemes)
+library(dplyr)
+library(Rtsne)
 ```
 
 ## Loading the data
@@ -30,8 +32,41 @@ ggplot(fullTrain, aes(x=Neighborhood,y=SalePrice))+
 options(scipen=5)
 hist(fullTrain$SalePrice, xlab = "Sale Price", main = "Histogram of Sale Price")
 ```
-```{r}
 
+To do a preliminary examination of the data, we wanted to do some dimensionality reduction to see if there were any obvious structures in the data.
+
+First, we computed PCA on the data, then plotted them. 
+```{r}
+numeric_columns_only <- fullTrain %>% select_if(is.numeric)
+numeric_full_columns_only <- numeric_columns_only[complete.cases(numeric_columns_only),]
+p<-pca(as.matrix(numeric_full_columns_only))
+
+x<-princomp(as.matrix(numeric_full_columns_only))
+
+numeric_col_w_prcmp <- numeric_full_columns_only %>% mutate(pca1 = x$scores[,1],pca2 = x$scores[,2])
+
+cols_w_prcmp <- inner_join(numeric_col_w_prcmp, fullTrain)
+
+outlier <- cols_w_prcmp %>% filter(pca1>150000)
+
+cols_w_prcmp <- cols_w_prcmp %>% filter(pca1<150000)
+
+ggplot(cols_w_prcmp, aes(x=pca1, y=pca2, col=MSSubClass))+
+       geom_point(shape=21,alpha = .9)+
+       theme_few()
 ```
 
+Then we decided to compare dimensionality reduction of a t-SNE plot, which stands for t-distributed Stochastic Neighbor Embedding. It is a dimensionality reduction algorithm that embeds high dimensional data into a 2 dimensional space. There is a nice [R vignette about the package](https://cran.r-project.org/web/packages/tsne/tsne.pdf), a [blog post](https://www.codeproject.com/Tips/788739/Visualization-of-High-Dimensional-Data-using-t-SNE) about its use in R, and an [interactive visualization](http://distill.pub/2016/misread-tsne/) characterizing its strengths and weaknesses.
+
+```{r}
+housing_tsne<-Rtsne(numeric_full_columns_only)
+
+numeric_col_w_tsne<- numeric_full_columns_only %>% mutate(tsne1 = housing_tsne$Y[,1],tsne2 = housing_tsne$Y[,2])
+
+cols_w_tsne <- inner_join(numeric_col_w_tsne, fullTrain)
+
+ggplot(cols_w_tsne, aes(x=tsne1,y=tsne2,col=log(SalePrice)))+
+       geom_point()+
+       theme_few()
+```
 
