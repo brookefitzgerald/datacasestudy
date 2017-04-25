@@ -16,6 +16,8 @@ library(amap)
 library(dummies)
 library(rpart)
 library(caret)
+library(gam)
+library(mice)
 ```
 
 ## Loading the data
@@ -81,10 +83,9 @@ ggplot(cols_w_tsne, aes(x=tsne1,y=tsne2,col=MSSubClass))+
 Next we wanted to do some one hot variable encoding in order to test correlation between SalePrice and factor variables.
 ```{r}
 one_hot_encoded<- dummy.data.frame(fullTrain)
-one_hot_encoded <- one_hot_encoded[complete.cases(one_hot_encoded),]
+one_hot_encoded_cc <- one_hot_encoded[complete.cases(one_hot_encoded),]
 
-corprice<-cor(one_hot_encoded)[,"SalePrice"]
-corprice<-corprice[!is.na(corprice)]
+corprice<-cor(one_hot_encoded_cc)[,"SalePrice"]
 corprice<-corprice[names(corprice)!="SalePrice"]
 sub_corprice <- corprice[abs(corprice)>0.5]
 
@@ -94,52 +95,106 @@ ggplot()+
   labs(y="Correlation to SalePrice", x = "Variable")+
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggplot(one_hot_encoded, aes(x=SalePrice,y=GrLivArea))+
+ggplot(one_hot_encoded_cc, aes(x=SalePrice,y=GrLivArea))+
   geom_point()+
   theme_few()
-one_hot_encoded %>% filter(GrLivArea>4500)
-fullTrain %>% filter(GrLivArea>4500)
 ```
 ```{r}
-housing_tsne<-Rtsne(one_hot_encoded)
+housing_tsne<-Rtsne(one_hot_encoded_cc)
 
-numeric_col_w_tsne<- one_hot_encoded %>% mutate(tsne1 = housing_tsne$Y[,1],tsne2 = housing_tsne$Y[,2])
+numeric_col_w_tsne<- one_hot_encoded_cc %>% mutate(tsne1 = housing_tsne$Y[,1],tsne2 = housing_tsne$Y[,2])
 
 ggplot(numeric_col_w_tsne, aes(x=tsne1,y=tsne2,col=log(GrLivArea)))+
        geom_point()+
        theme_few()
-names(fullTrain)
+```
+
+## Removing NA values
+Because some predictive models don't allow for NA values and because every single observation has at least one NA value, we want to do some data imputation. The data was imputed using random forests. This imputed data can be used in conjunction with the one-hot encoded data to compare and contrast the various predictions.
+
+```{r, echo=F}
+imp <- mice(fullTrain,method='rf')
+imputed <- fullTrain
+
+# This function takes in a row of categories, then returns the category occuring most often
+f<- function(dataRow){
+       t<-table(dataRow)
+       return(names(sort(t,decreasing = TRUE)[1]))
+}
+i=1
+for(varName in imp$imp){
+       if (!is.null(varName[[1]])){
+              if (is.numeric(varName[[1]])){
+                    # if data is numeric, impute the mean 
+                     imputed[row.names(varName),names(imputed)[i]] = round(rowMeans(varName))
+              } else {
+                    # if data is categorical, impute the most often predicted category
+                     imputed[row.names(varName),names(imputed)[i]] = apply(varName, 1, f)
+              }
+              
+       }
+       i<-i+1
+}
+
 ```
 ## Starting Predictive Modeling
 The first step in predictive modeling is splitting the data into training and test sets.
 
 ```{r}
 indices<- createDataPartition(fullTrain$SalePrice,p=0.75)$Resample1
-train<- fullTrain[indices,]
-test<-fullTrain[-indices,]
+train.full<- fullTrain[indices,]
+test.full<-fullTrain[-indices,]
 
-one_hot_train<- one_hot_encoded[indices,]
-one_hot_test<-one_hot_encoded[-indices,]
+train.imp<- imputed[indices,]
+test.imp<-imputed[-indices,]
+
+train.onehot<- one_hot_encoded[indices,]
+test.onehot<-one_hot_encoded[-indices,]
 ```
+
+The first model we tried out was a decision tree.
 
 ```{r}
-tree.model1 <-rpart(SalePrice~.,train)
-tree.preds1 <- predict(tree.model1, test)
-tree.RMSE1 <- sqrt(sum((tree.preds1-test$SalePrice)^2))
+tree.model.full <-rpart(SalePrice~.,train.full)
+tree.preds.full <- predict(tree.model.full, test.full)
+tree.RMSE.full <- sqrt(sum((tree.preds1-test.full$SalePrice)^2))/length(tree.preds.full)
+tree.RMSE.full
 
-tree.model2 <-rpart(SalePrice~.,one_hot_train)
-tree.preds2 <- predict(tree.model2, one_hot_test)
-tree.RMSE2 <- sqrt(sum((tree.preds2-one_hot_test$SalePrice)^2))
+tree.model.onehot <-rpart(SalePrice~.,train.onehot)
+tree.preds.onehot <- predict(tree.model.onehot, test.onehot)
+tree.RMSE.onehot <- sqrt(sum((tree.preds.onehot-test.onehot$SalePrice)^2))/length(tree.preds.onehot)
+tree.RMSE.onehot
 
-rpart.plot::prp(tree.model1)
-rpart.plot::prp(tree.model2)
+tree.model.imp <-rpart(SalePrice~.,train.imp)
+tree.preds.imp <- predict(tree.model.imp, test.imp)
+tree.RMSE.imp <- sqrt(sum((tree.preds.imp-test.imp$SalePrice)^2))/length(tree.preds.imp)
+tree.RMSE.imp
 
-[c(-6,-7,)]
-my_formula<- as.formula(paste("SalePrice~", paste(names(fullTrain)[73:75], collapse="+")))
-lr.model2 <- lm(my_formula,fullTrain)
+tree.preds.avg <- rowMeans(cbind(tree.preds.full,tree.preds.onehot,tree.preds.imp))
+tree.RMSE.avg <- sqrt(sum((tree.preds.avg-test.full$SalePrice)^2))/length(tree.preds.avg)
+tree.RMSE.avg
 
-lr.model1 <- lm(SalePrice~.,one_hot_encoded, na.action = na.omit)
-summary(fullTrain)
-summary(lr.model1)
-summary(lr.model2)
+rpart.plot::prp(tree.model.full)
+rpart.plot::prp(tree.model.onehot)
+rpart.plot::prp(tree.model.imp)
+
+#[c(-6,-7,)]
+
+#my_formula<- as.formula(paste("SalePrice~", paste(names(fullTrain)[73:75], collapse="+")))
+gam.model2 <- gam(SalePrice~.,data=fullTrain)
+
+lr.model.imp <- lm(SalePrice~.,train.imp)
+lr.model.imp$xlevels$Condition2 <- union(lr.model.imp$xlevels$Condition2, levels(test.imp$Condition2))
+lr.model.imp$xlevels$Exterior1st <- union(lr.model.imp$xlevels$Exterior1st, levels(test.imp$Exterior1st))
+lr.preds.imp <- predict(lr.model.imp,test.imp)
+lr.RMSE.imp <- sqrt(sum((lr.preds.imp-test.imp$SalePrice)^2))/length(lr.preds.imp)
+lr.RMSE.imp
+
+lr.model.onehot <- lm(SalePrice~.,train.onehot, na.action = na.omit)
+lr.preds.onehot <- predict(lr.model.onehot,test.onehot)
+lr.RMSE.onehot <- sqrt(sum((lr.preds.onehot-test.onehot$SalePrice)^2))/length(lr.preds.onehot)
+lr.RMSE.onehot
+
+summary(lr.model.onehot)
 ```
+
