@@ -12,6 +12,10 @@ library(gpairs)
 library(ggthemes)
 library(dplyr)
 library(Rtsne)
+library(amap)
+library(dummies)
+library(rpart)
+library(caret)
 ```
 
 ## Loading the data
@@ -39,6 +43,7 @@ First, we computed PCA on the data, then plotted them.
 ```{r}
 numeric_columns_only <- fullTrain %>% select_if(is.numeric)
 numeric_full_columns_only <- numeric_columns_only[complete.cases(numeric_columns_only),]
+
 p<-pca(as.matrix(numeric_full_columns_only))
 
 x<-princomp(as.matrix(numeric_full_columns_only))
@@ -68,5 +73,73 @@ cols_w_tsne <- inner_join(numeric_col_w_tsne, fullTrain)
 ggplot(cols_w_tsne, aes(x=tsne1,y=tsne2,col=log(SalePrice)))+
        geom_point()+
        theme_few()
+ggplot(cols_w_tsne, aes(x=tsne1,y=tsne2,col=MSSubClass))+
+       geom_point()+
+       theme_few()
 ```
 
+Next we wanted to do some one hot variable encoding in order to test correlation between SalePrice and factor variables.
+```{r}
+one_hot_encoded<- dummy.data.frame(fullTrain)
+one_hot_encoded <- one_hot_encoded[complete.cases(one_hot_encoded),]
+
+corprice<-cor(one_hot_encoded)[,"SalePrice"]
+corprice<-corprice[!is.na(corprice)]
+corprice<-corprice[names(corprice)!="SalePrice"]
+sub_corprice <- corprice[abs(corprice)>0.5]
+
+ggplot()+
+  geom_bar(aes(x=reorder(names(sub_corprice), -sub_corprice),sub_corprice),stat="identity")+
+  theme_few()+
+  labs(y="Correlation to SalePrice", x = "Variable")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(one_hot_encoded, aes(x=SalePrice,y=GrLivArea))+
+  geom_point()+
+  theme_few()
+one_hot_encoded %>% filter(GrLivArea>4500)
+fullTrain %>% filter(GrLivArea>4500)
+```
+```{r}
+housing_tsne<-Rtsne(one_hot_encoded)
+
+numeric_col_w_tsne<- one_hot_encoded %>% mutate(tsne1 = housing_tsne$Y[,1],tsne2 = housing_tsne$Y[,2])
+
+ggplot(numeric_col_w_tsne, aes(x=tsne1,y=tsne2,col=log(GrLivArea)))+
+       geom_point()+
+       theme_few()
+names(fullTrain)
+```
+## Starting Predictive Modeling
+The first step in predictive modeling is splitting the data into training and test sets.
+
+```{r}
+indices<- createDataPartition(fullTrain$SalePrice,p=0.75)$Resample1
+train<- fullTrain[indices,]
+test<-fullTrain[-indices,]
+
+one_hot_train<- one_hot_encoded[indices,]
+one_hot_test<-one_hot_encoded[-indices,]
+```
+
+```{r}
+tree.model1 <-rpart(SalePrice~.,train)
+tree.preds1 <- predict(tree.model1, test)
+tree.RMSE1 <- sqrt(sum((tree.preds1-test$SalePrice)^2))
+
+tree.model2 <-rpart(SalePrice~.,one_hot_train)
+tree.preds2 <- predict(tree.model2, one_hot_test)
+tree.RMSE2 <- sqrt(sum((tree.preds2-one_hot_test$SalePrice)^2))
+
+rpart.plot::prp(tree.model1)
+rpart.plot::prp(tree.model2)
+
+[c(-6,-7,)]
+my_formula<- as.formula(paste("SalePrice~", paste(names(fullTrain)[73:75], collapse="+")))
+lr.model2 <- lm(my_formula,fullTrain)
+
+lr.model1 <- lm(SalePrice~.,one_hot_encoded, na.action = na.omit)
+summary(fullTrain)
+summary(lr.model1)
+summary(lr.model2)
+```
