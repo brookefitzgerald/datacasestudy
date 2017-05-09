@@ -197,4 +197,127 @@ lr.RMSE.onehot
 
 summary(lr.model.onehot)
 ```
+##The kNN Algorithm
+```{r}
+library(kknn)
+fullTrain<-na.omit(fullTrain)
+num_var<- sapply(fullTrain, is.numeric)
+#fullTrain[num_var] <- lapply(fullTrain[num_var], scale)
+summary(fullTrain[num_var])
+```
+# Let's predict on a test set of 1000 observations.The Rest will be used as train set.
+```{r}
+set.seed(1234)
+test <- 1:1000
+train.fullTrain <-fullTrain[num_var][-test,]
+test.fullTrain <- fullTrain[num_var][test,]
+train.Id <- fullTrain$Id[-test]
+test.Id <- fullTrain$Id[test]
+```
+## Let's assume k values= 1, 90 and 200 to see how they perform in terms of correct proportion of classification and success rate. The optimum k value can be chosen based on the outcomes
+```{r}
+install.packages(class)
+library(class)
+knn.1 <-  knn(train.fullTrain, test.fullTrain, train.Id,na.rm= TRUE, k=2)
+knn.90 <-  knn(train.fullTrain, test.fullTrain, train.Id,na.rm= TRUE, k=4)
+knn.200 <- knn(train.fullTrain, test.fullTrain, train.Id,na.rm= TRUE,k=6)
+```
+## Let's calculate the percentage of correct classification for k = 2,4 & 6
+```{r}
+100 * sum(test.Id == knn.1)/1000  # For knn = 1
+```
+#model <- train.kknn(SalePrice ~ ., data = fullTrain, kmax = 1459,data.na= False)
+##plot(fullTrain$SalePrice~fullTrain$SaleType)
+## We want to classify the sold houses in 3 main groups 
+# installing/loading the latest installr package:
+install.packages("installr"); library(installr) # install+load installr
+ updateR() # updating R.
+ library(ggplots2)
+ ## bagging classification trees & regression trees
+ install.packages("rpart")
+ library(rpart)
+ install.packages("ipred")
+library(resample)
+library(caret)
+library(mlbench)
+library(caretEnsemble)
+ fullTrain$Id <- NULL
+ fullTrain.subset<-fullTrain[,10:81]
+ na.omit(fullTrain.subset)
+ summary(fullTrain.subset)
+ control <- trainControl(method="repeatedcv", number=10, repeats=3)
+ seed <- 7
+ metric <- "Accuracy"
+ set.seed(seed)
+ fit.treebag <- train(SalePrice~., data=fullTrain.subset, method="treebag", metric=metric, trControl=control,na.rm=TRUE )
+ set.seed(seed)
+ fit.rf <- train(SalePrice~., data=fullTrain.subset, method="rf",metric=metric, trControl=control,na.rm=TRUE)
+ bagging_results <- resamples(list(treebag=fit.treebag, rf=fit.rf))
+ summary(bagging_results)
+ fullTrain.bagging<-bagging(SalePrice~.,data=fullTrain.subset,coob=TRUE) 
+summary(fullTrain.bagging)
+fullTrain.subsetpred.class<-predict(fullTrain.bagging,fullTrain.subset$SalePrice)
+##clustering
+#1. K-means
+#Determine the number of clusters
+# scaling the data by dividing each variable by its standard deviation:
+std <- apply(fullTrain[,-1], 2, sd) # finding standard deviations of variables
+fullTrain_SD <- sweep(fullTrain[,-1],2,std,FUN="/") 
+# Calculating pairwise Euclidean distances between the standardized variables:
+distance_fullTrain <- dist(fullTrain_SD)
+# plotting a Single network:
+fullTrain_SingleNet<- hclust(distance_fullTrain, method='single')
+plclust(fullTrain_SingleNet, labels=factors, ylab="Distance")
+# plotting a complete network:
+fullTrain_completeNet<-hclust(distance_fullTrain,method='complete')
+plclust(fullTrain_completeNet, labels=factors, ylab="Distance")
+# plotting an average network:
+fullTrain_avgNet <- hclust(distance_fullTrain, method='average')
+plclust(fullTrain_avgNet, labels=factors, ylab="Distance")
+# Note the complete linkage algorithm is slightly less prone to forming 
+# "outlier-only" clusters here.
+# Cutting the complete-linkage dendrogram to form k=2 clusters here:
+cut_2 <- cutree(fullTrain_completeNet, k=2)
+cut_2     # printing the "clustering vector"
+fullTrain_cluster2 <- lapply(1:2, function(nc) fullTrain[cut_2==nc]) summary(fullTrain_cluster2) # printing the clusters in terms of the factors labels
+# Suppose we preferred a 5-cluster solution:
+cut_5 <- cutree(fullTrain_completeNet, k=5)
+# Equivalently, in this case:
+cut_5 <- cutree(fullTrain_completeNet, h=2)  
+# h specifies the height at which the dendrogram should be cut
+cut_5   # printing the "clustering vector"
+fullTrain_cluster5 <- lapply(1:5, function(nc) fullTrain[cut_5==nc])  
+summary(fullTrain_cluster5)   # printing the clusters in terms of the Food labels
 
+############# Visualization of Clusters:
+### Via the scatterplot matrix:
+
+pairs(fullTrain[,-1], panel=function(x,y) text(x,y,cut_5))
+
+# Cluster 1 seems to be the high-fat, high-energy foods (beef, ham, pork)
+# Cluster 2 foods seem to have low iron (more white meats than red meats)
+# Cluster 4 foods have low protein (the clams)
+# Cluster 5 is a high-calcium outlier (canned sardines)
+
+### Via a plot of the scores on the first 2 principal components, 
+### with the clusters separated by color:
+
+fullTrain.pc <- princomp(fullTrain[,-1],cor=T)
+
+# Setting up the colors for the 5 clusters on the plot:
+my.color.vector <- rep("green", times=nrow(food))
+my.color.vector[cut.5==2] <- "red"
+my.color.vector[cut.5==3] <- "orange"
+my.color.vector[cut.5==4] <- "green"
+my.color.vector[cut.5==5] <- "yellow"
+
+# Plotting the PC scores:
+
+par(pty="s")
+plot(fullTrain.pc$scores[,1], food.pc$scores[,2], ylim=range(food.pc$scores[,1]), 
+     xlab="PC 1", ylab="PC 2", type ='n', lwd=2)
+text(food.pc$scores[,1], food.pc$scores[,2], labels=Food, cex=0.7, lwd=2,
+     col=my.color.vector)
+
+
+                                  
