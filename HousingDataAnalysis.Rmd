@@ -157,7 +157,7 @@ The first model we tried out was a decision tree.
 ```{r}
 tree.model.full <-rpart(SalePrice~.,train.full)
 tree.preds.full <- predict(tree.model.full, test.full)
-tree.RMSE.full <- sqrt(sum((tree.preds1-test.full$SalePrice)^2))/length(tree.preds.full)
+tree.RMSE.full <- sqrt(sum((tree.preds.full-test.full$SalePrice)^2))/length(tree.preds.full)
 tree.RMSE.full
 
 tree.model.onehot <-rpart(SalePrice~.,train.onehot)
@@ -165,7 +165,7 @@ tree.preds.onehot <- predict(tree.model.onehot, test.onehot)
 tree.RMSE.onehot <- sqrt(sum((tree.preds.onehot-test.onehot$SalePrice)^2))/length(tree.preds.onehot)
 tree.RMSE.onehot
 
-tree.model.imp <-rpart(SalePrice~.,train.imp)
+tree.model.imp <- rpart(SalePrice~.,train.imp)
 tree.preds.imp <- predict(tree.model.imp, test.imp)
 tree.RMSE.imp <- sqrt(sum((tree.preds.imp-test.imp$SalePrice)^2))/length(tree.preds.imp)
 tree.RMSE.imp
