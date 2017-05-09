@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 library(gpairs)
 library(ggthemes)
+library(MASS)
 library(dplyr)
 library(Rtsne)
 library(amap)
@@ -18,6 +19,9 @@ library(rpart)
 library(caret)
 library(gam)
 library(mice)
+library(rattle)
+library(gridExtra)
+library(leaps)
 ```
 
 ## Loading the data
@@ -159,29 +163,30 @@ tree.model.full <-rpart(SalePrice~.,train.full)
 tree.preds.full <- predict(tree.model.full, test.full)
 tree.RMSE.full <- sqrt(sum((tree.preds.full-test.full$SalePrice)^2))/length(tree.preds.full)
 tree.RMSE.full
+p1<-qplot(tree.preds.full,test.full$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Full Regression Tree Predictions",y="Sale Price ")
 
 tree.model.onehot <-rpart(SalePrice~.,train.onehot)
 tree.preds.onehot <- predict(tree.model.onehot, test.onehot)
 tree.RMSE.onehot <- sqrt(sum((tree.preds.onehot-test.onehot$SalePrice)^2))/length(tree.preds.onehot)
 tree.RMSE.onehot
+p2<-qplot(tree.preds.onehot,test.onehot$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "One-hot Regression Tree Predictions",y="Sale Price ")
 
 tree.model.imp <- rpart(SalePrice~.,train.imp)
 tree.preds.imp <- predict(tree.model.imp, test.imp)
 tree.RMSE.imp <- sqrt(sum((tree.preds.imp-test.imp$SalePrice)^2))/length(tree.preds.imp)
 tree.RMSE.imp
+p3<-qplot(tree.preds.imp,test.imp$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Imputed Regression Tree Predictions",y="Sale Price ")
 
 tree.preds.avg <- rowMeans(cbind(tree.preds.full,tree.preds.onehot,tree.preds.imp))
 tree.RMSE.avg <- sqrt(sum((tree.preds.avg-test.full$SalePrice)^2))/length(tree.preds.avg)
 tree.RMSE.avg
+p4<-qplot(tree.preds.avg,test.full$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Average Regression Tree Predictions",y="Sale Price ")
 
-rpart.plot::prp(tree.model.full)
-rpart.plot::prp(tree.model.onehot)
-rpart.plot::prp(tree.model.imp)
+grid.arrange(p1,p2,p3,p4,ncol=2,nrow=2)
 
-#[c(-6,-7,)]
-
-#my_formula<- as.formula(paste("SalePrice~", paste(names(fullTrain)[73:75], collapse="+")))
-gam.model2 <- gam(SalePrice~.,data=fullTrain)
+fancyRpartPlot(tree.model.full)
+fancyRpartPlot(tree.model.onehot)
+fancyRpartPlot(tree.model.imp)
 
 lr.model.imp <- lm(SalePrice~.,train.imp)
 lr.model.imp$xlevels$Condition2 <- union(lr.model.imp$xlevels$Condition2, levels(test.imp$Condition2))
@@ -189,13 +194,55 @@ lr.model.imp$xlevels$Exterior1st <- union(lr.model.imp$xlevels$Exterior1st, leve
 lr.preds.imp <- predict(lr.model.imp,test.imp)
 lr.RMSE.imp <- sqrt(sum((lr.preds.imp-test.imp$SalePrice)^2))/length(lr.preds.imp)
 lr.RMSE.imp
+qplot(lr.preds.imp,test.imp$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Imputed Linear Model Predictions",y="Imputed Sale Price ")
 
 lr.model.onehot <- lm(SalePrice~.,train.onehot, na.action = na.omit)
 lr.preds.onehot <- predict(lr.model.onehot,test.onehot)
 lr.RMSE.onehot <- sqrt(sum((lr.preds.onehot-test.onehot$SalePrice)^2))/length(lr.preds.onehot)
 lr.RMSE.onehot
+qplot(lr.preds.onehot,test.onehot$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "One-hot Linear Model Predictions",y="One-hot Sale Price ")
 
 summary(lr.model.onehot)
+plot(lr.model.onehot$residuals)
+significant_vars<-rownames(data.frame(summary(lr.model.onehot)$coef[summary(lr.model.onehot)$coef[,4] <= .01, 4]))
+sig_coefficients<-lr.model.onehot$coefficients[significant_vars]
+
+ggplot()+
+  geom_bar(aes(x=reorder(names(sig_coefficients), -sig_coefficients),sig_coefficients),stat="identity")+
+  theme_few()+
+  labs(y="Linear Model Coefficients", x = "Variable")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+p1<-ggplot(fullTrain, aes(x=RoofMatl, y = SalePrice))+
+  theme_few()+
+  geom_boxplot()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+p2<-ggplot(fullTrain, aes(x=Condition2, y = SalePrice))+
+  theme_few()+
+  geom_boxplot()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+p3<-ggplot(fullTrain, aes(x=GarageQual, y = SalePrice))+
+  theme_few()+
+  geom_boxplot()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+p4<-ggplot(fullTrain, aes(x=as.factor(BedroomAbvGr), y = SalePrice))+
+  theme_few()+
+  labs(x= "BedroomsAbvGr")+
+  geom_boxplot()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+grid.arrange(p1,p2,p3,p4,nrow=2,ncol=2)
+
+fullTrain %>% group_by(RoofMatl) %>% summarize(n_houses = n(), avg_sale_price = mean(SalePrice), med_sale_price = median(SalePrice))
+
+
+best_subset<-regsubsets(SalePrice~.,data = one_hot_encoded_cc,nvmax=5,method="forward")
+names(one_hot_encoded_cc)[summary(best_subset)$which[1,]]
+names(one_hot_encoded_cc)[summary(best_subset)$which[2,]]
+names(one_hot_encoded_cc)[summary(best_subset)$which[3,]]
+names(one_hot_encoded_cc)[summary(best_subset)$which[4,]]
+names(one_hot_encoded_cc)[summary(best_subset)$which[5,]]
+
 ```
 ##The kNN Algorithm
 ```{r}
