@@ -22,6 +22,7 @@ library(mice)
 library(rattle)
 library(gridExtra)
 library(leaps)
+library(glmnet)
 ```
 
 ## Loading the data
@@ -154,6 +155,9 @@ test.imp<-imputed[-indices,]
 
 train.onehot<- one_hot_encoded[indices,]
 test.onehot<-one_hot_encoded[-indices,]
+
+train.onehot.cc <-train.onehot[complete.cases(train.onehot),]
+test.onehot.cc <-test.onehot[complete.cases(test.onehot),]
 ```
 
 The first model we tried out was a decision tree.
@@ -236,14 +240,13 @@ grid.arrange(p1,p2,p3,p4,nrow=2,ncol=2)
 fullTrain %>% group_by(RoofMatl) %>% summarize(n_houses = n(), avg_sale_price = mean(SalePrice), med_sale_price = median(SalePrice))
 
 
-best_subset<-regsubsets(SalePrice~.,data = one_hot_encoded_cc,nvmax=5,method="forward")
-names(one_hot_encoded_cc)[summary(best_subset)$which[1,]]
-names(one_hot_encoded_cc)[summary(best_subset)$which[2,]]
-names(one_hot_encoded_cc)[summary(best_subset)$which[3,]]
-names(one_hot_encoded_cc)[summary(best_subset)$which[4,]]
-names(one_hot_encoded_cc)[summary(best_subset)$which[5,]]
+forward_subset<-regsubsets(SalePrice~.,data = one_hot_encoded_cc,method="forward")
+names(one_hot_encoded_cc)[summary(forward_subset)$which[5,]]
 
+backward_subset <-regsubsets(SalePrice~.,data = one_hot_encoded_cc,method="backward")
+names(one_hot_encoded_cc)[summary(backward_subset)$which[5,]]
 ```
+
 ##The kNN Algorithm
 ```{r}
 library(kknn)
@@ -335,6 +338,7 @@ cut_5 <- cutree(fullTrain_completeNet, h=2)
 cut_5   # printing the "clustering vector"
 fullTrain_cluster5 <- lapply(1:5, function(nc) fullTrain[cut_5==nc])  
 summary(fullTrain_cluster5)   # printing the clusters in terms of the Food labels
+
 
 ############# Visualization of Clusters:
 ### Via the scatterplot matrix:
