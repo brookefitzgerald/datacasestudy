@@ -26,6 +26,7 @@ library(rattle)
 library(gridExtra)
 library(leaps)
 library(glmnet)
+set.seed(1000)
 ```
 
 ## Loading and cleanng the data
@@ -319,7 +320,9 @@ grid.arrange(p1,p2,p3,p4,ncol=2,nrow=2)
 fancyRpartPlot(tree.model.full)
 fancyRpartPlot(tree.model.onehot)
 fancyRpartPlot(tree.model.imp)
+```
 
+```{r}
 lr.model.full <- lm(SalePrice~.,train.full, na.action = na.omit)
 lr.model.full$xlevels$Condition2 <- union(lr.model.full$xlevels$Condition2, levels(test.full$Condition2))
 lr.model.full$xlevels$RoofMatl <- union(lr.model.full$xlevels$RoofMatl, levels(test.full$RoofMatl))
@@ -330,6 +333,7 @@ lr.model.full$xlevels$MiscFeature <- union(lr.model.full$xlevels$MiscFeature, le
 lr.model.full$xlevels$Exterior1st <- union(lr.model.full$xlevels$Exterior1st, levels(test.full$Exterior1st))
 lr.model.full$xlevels$Exterior2nd <- union(lr.model.full$xlevels$Exterior2nd, levels(test.full$Exterior2nd))
 lr.model.full$xlevels$Functional <- union(lr.model.full$xlevels$Functional, levels(test.full$Functional))
+lr.model.full$xlevels$ExterCond <- union(lr.model.full$xlevels$ExterCond, levels(test.full$ExterCond))
 
 lr.preds.full <- predict(lr.model.full,test.full)
 lr.RMSE.full <- sqrt(sum((lr.preds.full-test.full$SalePrice)^2))/length(lr.preds.full)
@@ -346,6 +350,7 @@ lr.model.imp$xlevels$BsmtCond <- union(lr.model.imp$xlevels$BsmtCond, levels(tes
 lr.model.imp$xlevels$Heating <- union(lr.model.imp$xlevels$Heating, levels(test.imp$Heating))
 lr.model.imp$xlevels$Electrical <- union(lr.model.imp$xlevels$Electrical, levels(test.imp$Electrical))
 lr.model.imp$xlevels$MiscFeature <- union(lr.model.imp$xlevels$MiscFeature, levels(test.imp$MiscFeature))
+lr.model.imp$xlevels$ExterCond <- union(lr.model.imp$xlevels$ExterCond, levels(test.imp$ExterCond))
 lr.preds.imp <- predict(lr.model.imp,test.imp)
 lr.RMSE.imp <- sqrt(sum((lr.preds.imp-test.imp$SalePrice)^2))/length(lr.preds.imp)
 lr.RMSE.imp
@@ -367,7 +372,14 @@ ggplot()+
   theme_few()+
   labs(y="Linear Model Coefficients", x = "Variable")+
   coord_flip()
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+select_(test.onehot, -c("Condition2PosN", "PoolQCFa"))
+
+lr.model.onehot <- lm(SalePrice~.,train.onehot, na.action = na.omit)
+lr.preds.onehot <- predict(lr.model.onehot,test.onehot)
+lr.RMSE.onehot <- sqrt(sum((lr.preds.onehot-test.onehot$SalePrice)^2))/length(lr.preds.onehot)
+lr.RMSE.onehot
+qplot(lr.preds.onehot,test.onehot$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "One-hot Linear Model Predictions",y="One-hot Sale Price ")
 
 p1<-ggplot(fullTrain, aes(x=RoofMatl, y = SalePrice))+
   theme_few()+
