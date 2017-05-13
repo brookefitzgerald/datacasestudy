@@ -580,4 +580,98 @@ text(food.pc$scores[,1], food.pc$scores[,2], labels=Food, cex=0.7, lwd=2,
 >>>>>>> origin/master
 
 
-                                  
+
+#Random Forests
+
+
+
+#first we define multiplot function which will be used afterwards
+```{r}
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+  plots <- c(list(...), plotlist)
+  numPlots = length(plots)
+  if (is.null(layout)) {
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+  if (numPlots==1) {
+    print(plots[[1]])
+  } else {
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    for (i in 1:numPlots) {
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
+```    
+
+#i still need to change it for the actual data
+```{r}
+train <- read.csv("cleanedData.csv")
+train
+
+str(train)
+
+#View sale price since there are many NA values we only need to keep rows 1 - 1460
+train$SalePrice
+
+#training predictors
+trainX = train[1:1460,3:81]
+#training targets
+trainY = train[1:1460,82]
+#Combine training predictors and targets
+trainXY = cbind(trainX,"SalePrice" = trainY)
+#"GarageYrBlt" has 104 levels...way too many for a random forest model so 
+# we fix that by treating "GarageYrBlt" as a continuous predictor
+str(trainXY)
+trainXY$GarageYrBlt = as.numeric(trainXY$GarageYrBlt)
+trainX$GarageYrBlt = as.numeric(trainX$GarageYrBlt)
+```
+
+
+```{r}
+#5-fold cross validation
+set.seed(100)
+folds = createFolds(trainXY$SalePrice,k = 5)
+train1 = trainXY[-folds[[1]],1:80]
+train2 = trainXY[-folds[[2]],1:80]
+train3 = trainXY[-folds[[3]],1:80]
+train4 = trainXY[-folds[[4]],1:80]
+train5 = trainXY[-folds[[5]],1:80]
+
+#cross validation "test" set (including the target value "SalePrice")
+cvTest1 = trainXY[folds[[1]],1:80]
+cvTest2 = trainXY[folds[[2]],1:80]
+cvTest3 = trainXY[folds[[3]],1:80]
+cvTest4 = trainXY[folds[[4]],1:80]
+cvTest5 = trainXY[folds[[5]],1:80]
+
+#Build 5 models
+modelRF1 = randomForest(SalePrice ~ ., data = train1)
+modelRF2 = randomForest(SalePrice ~ ., data = train2)
+modelRF3 = randomForest(SalePrice ~ ., data = train3)
+modelRF4 = randomForest(SalePrice ~ ., data = train4)
+modelRF5 = randomForest(SalePrice ~ ., data = train5)
+
+#Make predictions using cross validation "test" sets
+Pred1 = predict(modelRF1, cvTest1)
+Pred2 = predict(modelRF2, cvTest2)
+Pred3 = predict(modelRF3, cvTest3)
+Pred4 = predict(modelRF4, cvTest4)
+Pred5 = predict(modelRF5, cvTest5)
+
+#Plot target vs. predicted for the 5 models
+tp1 = ggplot(data = as.data.frame(cbind("Target" = cvTest1$SalePrice,"Predicted" = Pred1)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
+tp2 = ggplot(data = as.data.frame(cbind("Target" = cvTest2$SalePrice,"Predicted" = Pred2)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
+tp3 = ggplot(data = as.data.frame(cbind("Target" = cvTest3$SalePrice,"Predicted" = Pred3)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
+tp4 = ggplot(data = as.data.frame(cbind("Target" = cvTest4$SalePrice,"Predicted" = Pred4)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
+tp5 = ggplot(data = as.data.frame(cbind("Target" = cvTest5$SalePrice,"Predicted" = Pred5)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
+multiplot(tp1,tp2,tp3,tp4,tp5,cols = 2)
+
+```
+
