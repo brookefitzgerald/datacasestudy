@@ -19,19 +19,21 @@ library(rpart)
 library(caret)
 library(gam)
 library(mice)
-<<<<<<< HEAD
 library(ipred)
 library(kknn)
+<<<<<<< HEAD
 library(randomForest)
 library(Metrics)
 library(caret)
 
 =======
+=======
+require(graphics)
+>>>>>>> origin/master
 library(rattle)
 library(gridExtra)
 library(leaps)
 library(glmnet)
->>>>>>> origin/master
 ```
 
 ## Loading and cleanng the data
@@ -408,12 +410,10 @@ data.frame("Variable Importance Rank"=1:6,
            "Forward Selected Variables" = names(one_hot_encoded_cc)[summary(forward_subset)$which[5,]], 
            "Backward Selected Variables" = names(one_hot_encoded_cc)[summary(backward_subset)$which[5,]])
 ```
-<<<<<<< HEAD
 # bagging regressionof Salesprice: nbagg =25(bbotstrap replications)
 =======
 
 ##The kNN Algorithm
->>>>>>> origin/master
 ```{r}
 fullTrain$Id <- NULL
 fullTrain.bagging<-bagging(SalePrice~.,data=fullTrain,coob=TRUE,na.action = na.omit)
@@ -448,7 +448,7 @@ summary(lm_1)$fstatistic[1]
 exp_var_fstat <- as.numeric(rep(NA, times = 30))
 names(exp_var_fstat) <- names(train.onehot)
 #Now run through the variables, get the linear fit and store the F-statistic
-
+```
 
 ## Hierarchical clustering
 ```{r}
@@ -457,12 +457,21 @@ d <- dist(one_hot_encoded_cc, method = "euclidean") # distance matrix
 hclust.fit <- hclust(d, method = "ward.D")
 plot(hclust.fit) # display dendogram
 hclust.groups <- cutree(hclust.fit, k = 5)
-pairs(one_hot_encoded_cc$SalePrice, col = hclust.groups, main = "Hierarchical Cluster")
-plot(one_hot_encoded_cc$SalePrice~., xlim = c(-0.158, 2), xlab = "variables other than SalePrice", ylab = "SalePrice",col = hclust.groups, main = "Hierarchical Cluster", pch = 20)
-par(opar)
+h_clust_data <- one_hot_encoded_cc %>% mutate(h_clust = hclust.groups)
+h_clust_data$h_clust <- factor(h_clust_data$h_clust)
+ggplot(h_clust_data, aes(h_clust,SalePrice))+
+  geom_boxplot()+
+  theme_few()
+
+ggplot(h_clust_data, aes(h_clust,OverallQual))+
+  geom_boxplot()+
+  theme_few()
+
+ggplot(h_clust_data, aes(GrLivArea,SalePrice, col=h_clust))+
+  geom_point()+
+  theme_few()
 ```
 ```{r}
-require(graphics)
 hc <- hclust(dist(one_hot_encoded_cc),"ave")
 plot(hc)
 plot(hc, hang = -1)
@@ -485,6 +494,7 @@ par(opar)
 
 
 ```
+<<<<<<< HEAD
 <<<<<<< HEAD
 =======
 #model <- train.kknn(SalePrice ~ ., data = fullTrain, kmax = 1459,data.na= False)
@@ -734,3 +744,5 @@ ImpOrd5 = Imp5[order(Imp5$Importance, decreasing = TRUE),]
 cbind(ImpOrd1,ImpOrd2,ImpOrd3,ImpOrd4,ImpOrd5)
 ```
 
+=======
+>>>>>>> origin/master
