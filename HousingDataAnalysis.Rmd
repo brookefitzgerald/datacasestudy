@@ -21,7 +21,15 @@ library(gam)
 library(mice)
 library(ipred)
 library(kknn)
+<<<<<<< HEAD
+library(randomForest)
+library(Metrics)
+library(caret)
+
+=======
+=======
 require(graphics)
+>>>>>>> origin/master
 library(rattle)
 library(gridExtra)
 library(leaps)
@@ -498,3 +506,255 @@ par(opar)
 
 
 ```
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+#model <- train.kknn(SalePrice ~ ., data = fullTrain, kmax = 1459,data.na= False)
+##plot(fullTrain$SalePrice~fullTrain$SaleType)
+## We want to classify the sold houses in 3 main groups 
+# installing/loading the latest installr package:
+install.packages("installr"); library(installr) # install+load installr
+ updateR() # updating R.
+ library(ggplots2)
+ ## bagging classification trees & regression trees
+ install.packages("rpart")
+ library(rpart)
+ install.packages("ipred")
+library(resample)
+library(caret)
+library(mlbench)
+library(caretEnsemble)
+ fullTrain$Id <- NULL
+ fullTrain.subset<-fullTrain[,10:81]
+ na.omit(fullTrain.subset)
+ summary(fullTrain.subset)
+ control <- trainControl(method="repeatedcv", number=10, repeats=3)
+ seed <- 7
+ metric <- "Accuracy"
+ set.seed(seed)
+ fit.treebag <- train(SalePrice~., data=fullTrain.subset, method="treebag", metric=metric, trControl=control,na.rm=TRUE )
+ set.seed(seed)
+ fit.rf <- train(SalePrice~., data=fullTrain.subset, method="rf",metric=metric, trControl=control,na.rm=TRUE)
+ bagging_results <- resamples(list(treebag=fit.treebag, rf=fit.rf))
+ summary(bagging_results)
+ fullTrain.bagging<-bagging(SalePrice~.,data=fullTrain.subset,coob=TRUE) 
+summary(fullTrain.bagging)
+fullTrain.subsetpred.class<-predict(fullTrain.bagging,fullTrain.subset$SalePrice)
+##clustering
+#1. K-means
+#Determine the number of clusters
+# scaling the data by dividing each variable by its standard deviation:
+std <- apply(fullTrain[,-1], 2, sd) # finding standard deviations of variables
+fullTrain_SD <- sweep(fullTrain[,-1],2,std,FUN="/") 
+# Calculating pairwise Euclidean distances between the standardized variables:
+distance_fullTrain <- dist(fullTrain_SD)
+# plotting a Single network:
+fullTrain_SingleNet<- hclust(distance_fullTrain, method='single')
+plclust(fullTrain_SingleNet, labels=factors, ylab="Distance")
+# plotting a complete network:
+fullTrain_completeNet<-hclust(distance_fullTrain,method='complete')
+plclust(fullTrain_completeNet, labels=factors, ylab="Distance")
+# plotting an average network:
+fullTrain_avgNet <- hclust(distance_fullTrain, method='average')
+plclust(fullTrain_avgNet, labels=factors, ylab="Distance")
+# Note the complete linkage algorithm is slightly less prone to forming 
+# "outlier-only" clusters here.
+# Cutting the complete-linkage dendrogram to form k=2 clusters here:
+cut_2 <- cutree(fullTrain_completeNet, k=2)
+cut_2     # printing the "clustering vector"
+fullTrain_cluster2 <- lapply(1:2, function(nc) fullTrain[cut_2==nc]) summary(fullTrain_cluster2) # printing the clusters in terms of the factors labels
+# Suppose we preferred a 5-cluster solution:
+cut_5 <- cutree(fullTrain_completeNet, k=5)
+# Equivalently, in this case:
+cut_5 <- cutree(fullTrain_completeNet, h=2)  
+# h specifies the height at which the dendrogram should be cut
+cut_5   # printing the "clustering vector"
+fullTrain_cluster5 <- lapply(1:5, function(nc) fullTrain[cut_5==nc])  
+summary(fullTrain_cluster5)   # printing the clusters in terms of the Food labels
+
+
+############# Visualization of Clusters:
+### Via the scatterplot matrix:
+
+pairs(fullTrain[,-1], panel=function(x,y) text(x,y,cut_5))
+
+# Cluster 1 seems to be the high-fat, high-energy foods (beef, ham, pork)
+# Cluster 2 foods seem to have low iron (more white meats than red meats)
+# Cluster 4 foods have low protein (the clams)
+# Cluster 5 is a high-calcium outlier (canned sardines)
+
+### Via a plot of the scores on the first 2 principal components, 
+### with the clusters separated by color:
+
+fullTrain.pc <- princomp(fullTrain[,-1],cor=T)
+
+# Setting up the colors for the 5 clusters on the plot:
+my.color.vector <- rep("green", times=nrow(food))
+my.color.vector[cut.5==2] <- "red"
+my.color.vector[cut.5==3] <- "orange"
+my.color.vector[cut.5==4] <- "green"
+my.color.vector[cut.5==5] <- "yellow"
+
+# Plotting the PC scores:
+
+par(pty="s")
+plot(fullTrain.pc$scores[,1], food.pc$scores[,2], ylim=range(food.pc$scores[,1]), 
+     xlab="PC 1", ylab="PC 2", type ='n', lwd=2)
+text(food.pc$scores[,1], food.pc$scores[,2], labels=Food, cex=0.7, lwd=2,
+     col=my.color.vector)
+>>>>>>> origin/master
+
+
+
+#Random Forests
+
+
+
+#first we define multiplot function which will be used afterwards
+```{r}
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+  plots <- c(list(...), plotlist)
+  numPlots = length(plots)
+  if (is.null(layout)) {
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+  if (numPlots==1) {
+    print(plots[[1]])
+  } else {
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    for (i in 1:numPlots) {
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
+```    
+
+#i still need to change it for the actual data
+```{r}
+train <- read.csv("cleanedData.csv")
+train
+
+str(train)
+
+#View sale price since there are many NA values we only need to keep rows 1 - 1460
+train$SalePrice
+
+#training predictors
+trainX = train[1:1460,3:81]
+#training targets
+trainY = train[1:1460,82]
+#Combine training predictors and targets
+trainXY = cbind(trainX,"SalePrice" = trainY)
+#"GarageYrBlt" has 104 levels...way too many for a random forest model so 
+# we fix that by treating "GarageYrBlt" as a continuous predictor
+str(trainXY)
+trainXY$GarageYrBlt = as.numeric(trainXY$GarageYrBlt)
+trainX$GarageYrBlt = as.numeric(trainX$GarageYrBlt)
+```
+
+
+```{r}
+#5-fold cross validation
+set.seed(100)
+folds = createFolds(trainXY$SalePrice,k = 5)
+train1 = trainXY[-folds[[1]],1:80]
+train2 = trainXY[-folds[[2]],1:80]
+train3 = trainXY[-folds[[3]],1:80]
+train4 = trainXY[-folds[[4]],1:80]
+train5 = trainXY[-folds[[5]],1:80]
+
+#cross validation "test" set (including the target value "SalePrice")
+cvTest1 = trainXY[folds[[1]],1:80]
+cvTest2 = trainXY[folds[[2]],1:80]
+cvTest3 = trainXY[folds[[3]],1:80]
+cvTest4 = trainXY[folds[[4]],1:80]
+cvTest5 = trainXY[folds[[5]],1:80]
+
+#Build 5 models
+modelRF1 = randomForest(SalePrice ~ ., data = train1)
+modelRF2 = randomForest(SalePrice ~ ., data = train2)
+modelRF3 = randomForest(SalePrice ~ ., data = train3)
+modelRF4 = randomForest(SalePrice ~ ., data = train4)
+modelRF5 = randomForest(SalePrice ~ ., data = train5)
+
+#Make predictions using cross validation "test" sets
+Pred1 = predict(modelRF1, cvTest1)
+Pred2 = predict(modelRF2, cvTest2)
+Pred3 = predict(modelRF3, cvTest3)
+Pred4 = predict(modelRF4, cvTest4)
+Pred5 = predict(modelRF5, cvTest5)
+
+#Plot target vs. predicted for the 5 models
+tp1 = ggplot(data = as.data.frame(cbind("Target" = cvTest1$SalePrice,"Predicted" = Pred1)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
+tp2 = ggplot(data = as.data.frame(cbind("Target" = cvTest2$SalePrice,"Predicted" = Pred2)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
+tp3 = ggplot(data = as.data.frame(cbind("Target" = cvTest3$SalePrice,"Predicted" = Pred3)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
+tp4 = ggplot(data = as.data.frame(cbind("Target" = cvTest4$SalePrice,"Predicted" = Pred4)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
+tp5 = ggplot(data = as.data.frame(cbind("Target" = cvTest5$SalePrice,"Predicted" = Pred5)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
+multiplot(tp1,tp2,tp3,tp4,tp5,cols = 2)
+
+```
+
+```{r}
+#Calculate residuals
+Res1 = cvTest1$SalePrice - Pred1
+Res2 = cvTest2$SalePrice - Pred2
+Res3 = cvTest3$SalePrice - Pred3
+Res4 = cvTest4$SalePrice - Pred4
+Res5 = cvTest5$SalePrice - Pred5
+
+
+#Calculate RMSE
+rmse1 = rmse(cvTest1$SalePrice,Pred1)
+rmse2 = rmse(cvTest2$SalePrice,Pred2)
+rmse3 = rmse(cvTest3$SalePrice,Pred3)
+rmse4 = rmse(cvTest4$SalePrice,Pred4)
+rmse5 = rmse(cvTest5$SalePrice,Pred5)
+cbind(rmse1,rmse2,rmse3,rmse4,rmse5)
+
+#feature importance
+Imp1 = as.data.frame(modelRF1$importance)
+Imp1$Predictor = rownames(Imp1)
+Imp1 = Imp1[,c(2,1)]
+rownames(Imp1) = c(1:nrow(Imp1))
+colnames(Imp1)[2] = "Importance"
+ImpOrd1 = Imp1[order(Imp1$Importance, decreasing = TRUE),]
+
+Imp2 = as.data.frame(modelRF2$importance)
+Imp2$Predictor = rownames(Imp2)
+Imp2 = Imp2[,c(2,1)]
+rownames(Imp2) = c(1:nrow(Imp2))
+colnames(Imp2)[2] = "Importance"
+ImpOrd2 = Imp2[order(Imp2$Importance, decreasing = TRUE),]
+
+Imp3 = as.data.frame(modelRF3$importance)
+Imp3$Predictor = rownames(Imp3)
+Imp3 = Imp3[,c(2,1)]
+rownames(Imp3) = c(1:nrow(Imp3))
+colnames(Imp3)[2] = "Importance"
+ImpOrd3 = Imp3[order(Imp3$Importance, decreasing = TRUE),]
+
+Imp4 = as.data.frame(modelRF4$importance)
+Imp4$Predictor = rownames(Imp4)
+Imp4 = Imp4[,c(2,1)]
+rownames(Imp4) = c(1:nrow(Imp4))
+colnames(Imp4)[2] = "Importance"
+ImpOrd4 = Imp4[order(Imp4$Importance, decreasing = TRUE),]
+
+Imp5 = as.data.frame(modelRF5$importance)
+Imp5$Predictor = rownames(Imp5)
+Imp5 = Imp5[,c(2,1)]
+rownames(Imp5) = c(1:nrow(Imp5))
+colnames(Imp5)[2] = "Importance"
+ImpOrd5 = Imp5[order(Imp5$Importance, decreasing = TRUE),]
+
+cbind(ImpOrd1,ImpOrd2,ImpOrd3,ImpOrd4,ImpOrd5)
+```
+
+=======
+>>>>>>> origin/master
