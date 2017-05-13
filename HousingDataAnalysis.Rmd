@@ -29,7 +29,7 @@ library(rattle)
 library(gridExtra)
 library(leaps)
 library(glmnet)
-set.seed(1000)
+set.seed(3000)
 ```
 
 ## Loading and cleanng the data
@@ -327,19 +327,13 @@ fancyRpartPlot(tree.model.imp)
 
 ```{r}
 lr.model.full <- lm(SalePrice~.,train.full, na.action = na.omit)
-lr.model.full$xlevels$Condition2 <- union(lr.model.full$xlevels$Condition2, levels(test.full$Condition2))
 lr.model.full$xlevels$RoofMatl <- union(lr.model.full$xlevels$RoofMatl, levels(test.full$RoofMatl))
-lr.model.full$xlevels$BsmtCond <- union(lr.model.full$xlevels$BsmtCond, levels(test.full$BsmtCond))
-lr.model.full$xlevels$Heating <- union(lr.model.full$xlevels$Heating, levels(test.full$Heating))
-lr.model.full$xlevels$Electrical <- union(lr.model.full$xlevels$Electrical, levels(test.full$Electrical))
-lr.model.full$xlevels$MiscFeature <- union(lr.model.full$xlevels$MiscFeature, levels(test.full$MiscFeature))
 lr.model.full$xlevels$Exterior1st <- union(lr.model.full$xlevels$Exterior1st, levels(test.full$Exterior1st))
 lr.model.full$xlevels$Exterior2nd <- union(lr.model.full$xlevels$Exterior2nd, levels(test.full$Exterior2nd))
-lr.model.full$xlevels$Functional <- union(lr.model.full$xlevels$Functional, levels(test.full$Functional))
 lr.model.full$xlevels$ExterCond <- union(lr.model.full$xlevels$ExterCond, levels(test.full$ExterCond))
-
+lr.model.full$xlevels$Electrical <- union(lr.model.full$xlevels$Electrical, levels(test.full$Electrical))
 lr.preds.full <- predict(lr.model.full,test.full)
-lr.RMSE.full <- sqrt(sum((lr.preds.full-test.full$SalePrice)^2))/length(lr.preds.full)
+lr.RMSE.full <- sqrt(sum((lr.preds.full-test.full$SalePrice)^2,na.rm=TRUE))/length(lr.preds.full)
 lr.RMSE.full
 qplot(lr.preds.full,test.full$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Full Linear Model Predictions",y="Full Sale Price ")
 
@@ -355,13 +349,13 @@ lr.model.imp$xlevels$Electrical <- union(lr.model.imp$xlevels$Electrical, levels
 lr.model.imp$xlevels$MiscFeature <- union(lr.model.imp$xlevels$MiscFeature, levels(test.imp$MiscFeature))
 lr.model.imp$xlevels$ExterCond <- union(lr.model.imp$xlevels$ExterCond, levels(test.imp$ExterCond))
 lr.preds.imp <- predict(lr.model.imp,test.imp)
-lr.RMSE.imp <- sqrt(sum((lr.preds.imp-test.imp$SalePrice)^2))/length(lr.preds.imp)
+lr.RMSE.imp <- sqrt(sum((lr.preds.imp-test.imp$SalePrice)^2,na.rm = TRUE))/length(lr.preds.imp)
 lr.RMSE.imp
-qplot(lr.preds.imp,test.imp$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Imputed Linear Model Predictions",y="Imputed Sale Price ")
+qplot(lr.preds.imp,test.imp$SalePrice[!is.na(lr.preds.imp)])+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Imputed Linear Model Predictions",y="Imputed Sale Price ")
 
 lr.model.onehot <- lm(SalePrice~.,train.onehot, na.action = na.omit)
 lr.preds.onehot <- predict(lr.model.onehot,test.onehot)
-lr.RMSE.onehot <- sqrt(sum((lr.preds.onehot-test.onehot$SalePrice)^2))/length(lr.preds.onehot)
+lr.RMSE.onehot <- sqrt(sum((lr.preds.onehot-test.onehot$SalePrice)^2,na.rm=T))/length(lr.preds.onehot)
 lr.RMSE.onehot
 qplot(lr.preds.onehot,test.onehot$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "One-hot Linear Model Predictions",y="One-hot Sale Price ")
 
@@ -373,16 +367,8 @@ sig_coefficients<-lr.model.onehot$coefficients[significant_vars]
 ggplot()+
   geom_bar(aes(x=reorder(names(sig_coefficients), -sig_coefficients),sig_coefficients),stat="identity")+
   theme_few()+
-  labs(y="Linear Model Coefficients", x = "Variable")+
+  labs(title = "Significant p<0.01 One-Hot Encoded Coefficients",y="Linear Model Coefficients", x = "Variable")+
   coord_flip()
-
-select_(test.onehot, -c("Condition2PosN", "PoolQCFa"))
-
-lr.model.onehot <- lm(SalePrice~.,train.onehot, na.action = na.omit)
-lr.preds.onehot <- predict(lr.model.onehot,test.onehot)
-lr.RMSE.onehot <- sqrt(sum((lr.preds.onehot-test.onehot$SalePrice)^2))/length(lr.preds.onehot)
-lr.RMSE.onehot
-qplot(lr.preds.onehot,test.onehot$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "One-hot Linear Model Predictions",y="One-hot Sale Price ")
 
 p1<-ggplot(fullTrain, aes(x=RoofMatl, y = SalePrice))+
   theme_few()+
