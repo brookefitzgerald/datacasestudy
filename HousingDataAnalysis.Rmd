@@ -25,28 +25,148 @@ library(leaps)
 library(glmnet)
 ```
 
-## Loading the data
+## Loading and cleanng the data
 
 ```{r importdata}
 fullTrain <- read.csv("train.csv")
 fullTest <- read.csv("test.csv")
+
+fullTrain$LotFrontage[is.na(fullTrain$LotFrontage)]<-0.0
+
+levels(fullTrain$Alley)[length(levels(fullTrain$Alley))+1] = "None"
+fullTrain$Alley[is.na(fullTrain$Alley)]<-"None"
+
+levels(fullTrain$PoolQC)[length(levels(fullTrain$PoolQC))+1] = "None"
+fullTrain$PoolQC[is.na(fullTrain$PoolQC)]<-"None"
+
+levels(fullTrain$Fence)[length(levels(fullTrain$Fence))+1] = "None"
+fullTrain$Fence[is.na(fullTrain$Fence)]<-"None"
+
+levels(fullTrain$MiscFeature)[length(levels(fullTrain$MiscFeature))+1] = "None"
+fullTrain$MiscFeature[is.na(fullTrain$MiscFeature)]<-"None"
+
+levels(fullTrain$GarageQual)[length(levels(fullTrain$GarageQual))+1] = "None"
+fullTrain$GarageQual[is.na(fullTrain$GarageQual)]<-"None"
+
+levels(fullTrain$GarageCond)[length(levels(fullTrain$GarageCond))+1] = "None"
+fullTrain$GarageCond[is.na(fullTrain$GarageCond)]<-"None"
+
+levels(fullTrain$BsmtQual)[length(levels(fullTrain$BsmtQual))+1] = "None"
+fullTrain$BsmtQual[is.na(fullTrain$BsmtQual)]<-"None"
+
+levels(fullTrain$BsmtCond)[length(levels(fullTrain$BsmtCond))+1] = "None"
+fullTrain$BsmtCond[is.na(fullTrain$BsmtCond)]<-"None"
+
+levels(fullTrain$BsmtExposure)[length(levels(fullTrain$BsmtExposure))+1] = "None"
+fullTrain$BsmtExposure[is.na(fullTrain$BsmtExposure)]<-"None"
+
+levels(fullTrain$BsmtFinType1)[length(levels(fullTrain$BsmtFinType1))+1] = "None"
+fullTrain$BsmtFinType1[is.na(fullTrain$BsmtFinType1)]<-"None"
+
+levels(fullTrain$BsmtFinType2)[length(levels(fullTrain$BsmtFinType2))+1] = "None"
+fullTrain$BsmtFinType2[is.na(fullTrain$BsmtFinType2)]<-"None"
+
+levels(fullTrain$FireplaceQu)[length(levels(fullTrain$FireplaceQu))+1] = "None"
+fullTrain$FireplaceQu[is.na(fullTrain$FireplaceQu)]<-"None"
+
+levels(fullTrain$GarageYrBlt)[length(levels(fullTrain$GarageYrBlt))+1] = "None"
+fullTrain$GarageYrBlt[is.na(fullTrain$GarageYrBlt)]<-"None"
+
+levels(fullTrain$GarageType)[length(levels(fullTrain$GarageType))+1] = "None"
+fullTrain$GarageType[is.na(fullTrain$GarageType)]<-"None"
+
+levels(fullTrain$GarageFinish)[length(levels(fullTrain$GarageFinish))+1] = "None"
+fullTrain$GarageFinish[is.na(fullTrain$GarageFinish)]<-"None"
+
+dim(fullTrain[complete.cases(fullTrain),])
+```
+```{r,echo=FALSE}
+fullTest$LotFrontage[is.na(fullTest$LotFrontage)]<-0.0
+
+levels(fullTest$Alley)[length(levels(fullTest$Alley))+1] = "None"
+fullTest$Alley[is.na(fullTest$Alley)]<-"None"
+
+levels(fullTest$PoolQC)[length(levels(fullTest$PoolQC))+1] = "None"
+fullTest$PoolQC[is.na(fullTest$PoolQC)]<-"None"
+
+levels(fullTest$Fence)[length(levels(fullTest$Fence))+1] = "None"
+fullTest$Fence[is.na(fullTest$Fence)]<-"None"
+
+levels(fullTest$MiscFeature)[length(levels(fullTest$MiscFeature))+1] = "None"
+fullTest$MiscFeature[is.na(fullTest$MiscFeature)]<-"None"
+
+levels(fullTest$GarageQual)[length(levels(fullTest$GarageQual))+1] = "None"
+fullTest$GarageQual[is.na(fullTest$GarageQual)]<-"None"
+
+levels(fullTest$GarageCond)[length(levels(fullTest$GarageCond))+1] = "None"
+fullTest$GarageCond[is.na(fullTest$GarageCond)]<-"None"
+
+levels(fullTest$BsmtQual)[length(levels(fullTest$BsmtQual))+1] = "None"
+fullTest$BsmtQual[is.na(fullTest$BsmtQual)]<-"None"
+
+levels(fullTest$BsmtCond)[length(levels(fullTest$BsmtCond))+1] = "None"
+fullTest$BsmtCond[is.na(fullTest$BsmtCond)]<-"None"
+
+levels(fullTest$BsmtExposure)[length(levels(fullTest$BsmtExposure))+1] = "None"
+fullTest$BsmtExposure[is.na(fullTest$BsmtExposure)]<-"None"
+
+levels(fullTest$BsmtFinType1)[length(levels(fullTest$BsmtFinType1))+1] = "None"
+fullTest$BsmtFinType1[is.na(fullTest$BsmtFinType1)]<-"None"
+
+levels(fullTest$BsmtFinType2)[length(levels(fullTest$BsmtFinType2))+1] = "None"
+fullTest$BsmtFinType2[is.na(fullTest$BsmtFinType2)]<-"None"
+
+levels(fullTest$FireplaceQu)[length(levels(fullTest$FireplaceQu))+1] = "None"
+fullTest$FireplaceQu[is.na(fullTest$FireplaceQu)]<-"None"
+
+levels(fullTest$GarageType)[length(levels(fullTest$GarageType))+1] = "None"
+fullTest$GarageType[is.na(fullTest$GarageType)]<-"None"
+
+levels(fullTest$GarageFinish)[length(levels(fullTest$GarageFinish))+1] = "None"
+fullTest$GarageFinish[is.na(fullTest$GarageFinish)]<-"None"
+
+fullTest<-dplyr::select(fullTest,-GarageYrBlt)
+fullTrain<-dplyr::select(fullTrain,-GarageYrBlt)
 ```
 
 ## Exploratory Data Analysis
 
-```{r pressure, echo=FALSE}
+```{r}
 summary(fullTrain)
+
 ggplot(fullTrain, aes(x=Neighborhood,y=SalePrice))+
        geom_boxplot()+
        theme_few()+
        theme(axis.text.x = element_text(angle = 90, hjust = 1))
 options(scipen=5)
 hist(fullTrain$SalePrice, xlab = "Sale Price", main = "Histogram of Sale Price")
+
+ggplot(fullTrain, aes(x=YearBuilt,y=SalePrice))+
+       geom_point(alpha = 0.4)+
+       theme_few()+
+       theme(axis.text.x = element_text(angle = 90, hjust = 1))
+ggplot(fullTrain, aes(x=OverallQual,y=SalePrice))+
+       geom_jitter(alpha = 0.5)+
+       theme_few()
+ggplot(fullTrain, aes(x=TotRmsAbvGrd,y=SalePrice, col = OverallQual))+
+       geom_jitter(alpha = 0.7)+
+       theme_few()
+fullTrain %>% group_by(MoSold) %>% summarize(NumSold=n(),MeanSalePrice=mean(SalePrice))%>%
+ggplot(aes(x=MoSold,y=NumSold, fill=MeanSalePrice))+
+       geom_bar(stat='identity')+
+       scale_x_continuous(breaks = 1:12)+
+       theme_few()
+fullTrain %>% group_by(MoSold) %>% summarize(NumSold=n(),MedianSalePrice=median(SalePrice))%>%
+ggplot(aes(x=MoSold,y=NumSold, fill=MedianSalePrice))+
+       geom_bar(stat='identity')+
+       scale_x_continuous(breaks = 1:12)+
+       theme_few()
+
 ```
 
 To do a preliminary examination of the data, we wanted to do some dimensionality reduction to see if there were any obvious structures in the data.
 
-First, we computed PCA on the data, then plotted them. 
+First, we computed PCA on the data with two different algorithms, then plotted them. 
 ```{r}
 numeric_columns_only <- fullTrain %>% select_if(is.numeric)
 numeric_full_columns_only <- numeric_columns_only[complete.cases(numeric_columns_only),]
@@ -55,15 +175,18 @@ p<-pca(as.matrix(numeric_full_columns_only))
 
 x<-princomp(as.matrix(numeric_full_columns_only))
 
-numeric_col_w_prcmp <- numeric_full_columns_only %>% mutate(pca1 = x$scores[,1],pca2 = x$scores[,2])
+numeric_col_w_prcmp <- numeric_full_columns_only %>% mutate(princomp1 = x$scores[,1], princomp2 = x$scores[,2], pca1 = p$scores[,1], pca2 = p$scores[,2])
 
 cols_w_prcmp <- inner_join(numeric_col_w_prcmp, fullTrain)
 
-outlier <- cols_w_prcmp %>% filter(pca1>150000)
+outlier <- cols_w_prcmp %>% filter(princomp2<(-10000))
 
-cols_w_prcmp <- cols_w_prcmp %>% filter(pca1<150000)
+cols_w_prcmp <- cols_w_prcmp %>% filter(princomp2>(-10000))
 
 ggplot(cols_w_prcmp, aes(x=pca1, y=pca2, col=MSSubClass))+
+       geom_point(shape=21,alpha = .9)+
+       theme_few()
+ggplot(cols_w_prcmp, aes(x=princomp1, y=princomp2, col=MSSubClass))+
        geom_point(shape=21,alpha = .9)+
        theme_few()
 ```
@@ -97,13 +220,15 @@ sub_corprice <- corprice[abs(corprice)>0.5]
 ggplot()+
   geom_bar(aes(x=reorder(names(sub_corprice), -sub_corprice),sub_corprice),stat="identity")+
   theme_few()+
-  labs(y="Correlation to SalePrice", x = "Variable")+
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  coord_flip()+
+  labs(y="Correlation to SalePrice", x = "Variable")
 
 ggplot(one_hot_encoded_cc, aes(x=SalePrice,y=GrLivArea))+
   geom_point()+
   theme_few()
 ```
+
+
 ```{r}
 housing_tsne<-Rtsne(one_hot_encoded_cc)
 
@@ -192,9 +317,32 @@ fancyRpartPlot(tree.model.full)
 fancyRpartPlot(tree.model.onehot)
 fancyRpartPlot(tree.model.imp)
 
+lr.model.full <- lm(SalePrice~.,train.full, na.action = na.omit)
+lr.model.full$xlevels$Condition2 <- union(lr.model.full$xlevels$Condition2, levels(test.full$Condition2))
+lr.model.full$xlevels$RoofMatl <- union(lr.model.full$xlevels$RoofMatl, levels(test.full$RoofMatl))
+lr.model.full$xlevels$BsmtCond <- union(lr.model.full$xlevels$BsmtCond, levels(test.full$BsmtCond))
+lr.model.full$xlevels$Heating <- union(lr.model.full$xlevels$Heating, levels(test.full$Heating))
+lr.model.full$xlevels$Electrical <- union(lr.model.full$xlevels$Electrical, levels(test.full$Electrical))
+lr.model.full$xlevels$MiscFeature <- union(lr.model.full$xlevels$MiscFeature, levels(test.full$MiscFeature))
+lr.model.full$xlevels$Exterior1st <- union(lr.model.full$xlevels$Exterior1st, levels(test.full$Exterior1st))
+lr.model.full$xlevels$Exterior2nd <- union(lr.model.full$xlevels$Exterior2nd, levels(test.full$Exterior2nd))
+lr.model.full$xlevels$Functional <- union(lr.model.full$xlevels$Functional, levels(test.full$Functional))
+
+lr.preds.full <- predict(lr.model.full,test.full)
+lr.RMSE.full <- sqrt(sum((lr.preds.full-test.full$SalePrice)^2))/length(lr.preds.full)
+lr.RMSE.full
+qplot(lr.preds.full,test.full$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Full Linear Model Predictions",y="Full Sale Price ")
+
 lr.model.imp <- lm(SalePrice~.,train.imp)
 lr.model.imp$xlevels$Condition2 <- union(lr.model.imp$xlevels$Condition2, levels(test.imp$Condition2))
 lr.model.imp$xlevels$Exterior1st <- union(lr.model.imp$xlevels$Exterior1st, levels(test.imp$Exterior1st))
+lr.model.imp$xlevels$Exterior2nd <- union(lr.model.imp$xlevels$Exterior2nd, levels(test.imp$Exterior2nd))
+lr.model.imp$xlevels$RoofMatl <- union(lr.model.imp$xlevels$RoofMatl, levels(test.imp$RoofMatl))
+lr.model.imp$xlevels$Functional <- union(lr.model.imp$xlevels$Functional, levels(test.imp$Functional))
+lr.model.imp$xlevels$BsmtCond <- union(lr.model.imp$xlevels$BsmtCond, levels(test.imp$BsmtCond))
+lr.model.imp$xlevels$Heating <- union(lr.model.imp$xlevels$Heating, levels(test.imp$Heating))
+lr.model.imp$xlevels$Electrical <- union(lr.model.imp$xlevels$Electrical, levels(test.imp$Electrical))
+lr.model.imp$xlevels$MiscFeature <- union(lr.model.imp$xlevels$MiscFeature, levels(test.imp$MiscFeature))
 lr.preds.imp <- predict(lr.model.imp,test.imp)
 lr.RMSE.imp <- sqrt(sum((lr.preds.imp-test.imp$SalePrice)^2))/length(lr.preds.imp)
 lr.RMSE.imp
@@ -215,6 +363,7 @@ ggplot()+
   geom_bar(aes(x=reorder(names(sig_coefficients), -sig_coefficients),sig_coefficients),stat="identity")+
   theme_few()+
   labs(y="Linear Model Coefficients", x = "Variable")+
+  coord_flip()
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 p1<-ggplot(fullTrain, aes(x=RoofMatl, y = SalePrice))+
@@ -241,10 +390,14 @@ fullTrain %>% group_by(RoofMatl) %>% summarize(n_houses = n(), avg_sale_price = 
 
 
 forward_subset<-regsubsets(SalePrice~.,data = one_hot_encoded_cc,method="forward")
-names(one_hot_encoded_cc)[summary(forward_subset)$which[5,]]
+forward<-names(one_hot_encoded_cc)[summary(forward_subset)$which[5,]]
 
 backward_subset <-regsubsets(SalePrice~.,data = one_hot_encoded_cc,method="backward")
-names(one_hot_encoded_cc)[summary(backward_subset)$which[5,]]
+backward<-names(one_hot_encoded_cc)[summary(backward_subset)$which[5,]]
+
+data.frame("Variable Importance Rank"=1:6,
+           "Forward Selected Variables" = names(one_hot_encoded_cc)[summary(forward_subset)$which[5,]], 
+           "Backward Selected Variables" = names(one_hot_encoded_cc)[summary(backward_subset)$which[5,]])
 ```
 
 ##The kNN Algorithm
