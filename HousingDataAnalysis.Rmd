@@ -5,6 +5,13 @@ date: "4/2/2017"
 output: html_document
 ---
 
+# Introduction
+This data analysis project set out to answer two questions: 
+1. Are there natural clusters of houses that can be derived and explained from within the data and what do those clusters correspond to?
+2. Which variables are most important to determining the sale price of a house?
+
+The dataset we set out to analyze was found on the Kaggle Competition: “House Prices: Advanced Regression Techniques.” The original data comes from the Ames City Assessor’s Office in the form of a data dump from their records system. The initial Excel file contained 113 variables describing 3970 property sales that had occurred in this city between 2006 and 2010. This data was obtained by Prof. De Cock (from Truman State University) who removed variables that required special knowledge or previous calculations for their use, leaving us with the 80 variable dataset we have now.
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
@@ -32,11 +39,16 @@ library(glmnet)
 set.seed(3000)
 ```
 
-## Loading and cleanng the data
+## Loading and cleaning the data
+
+The first step in the data analysis process is data cleaning. This dataset needed quite a bit of cleaning. Many of the variables were only valid in some situations, like PoolQC - a variable that encodes the quality of a pool. In the data descriptions, it stated that if a house didn't have a pool, the variable was encoded as NA. This also artificially inflated the number of rows that were missing values when in fact the NA was simply coding for the lack of an attribute (pool, garage, deck, etc.). 
+
+Therefore, we decided that for all of the variables that used NA to encode a missing attribute, we replaced the NA values for a factor "None" to explicitely encode for that missing attribute. This brought the number of complete observations up from 0 to 1451.
 
 ```{r importdata}
 fullTrain <- read.csv("train.csv")
 fullTest <- read.csv("test.csv")
+paste("Initial complete observations: ", dim(fullTrain[complete.cases(fullTrain),])[1])
 
 fullTrain$LotFrontage[is.na(fullTrain$LotFrontage)]<-0.0
 
@@ -85,7 +97,7 @@ fullTrain$GarageType[is.na(fullTrain$GarageType)]<-"None"
 levels(fullTrain$GarageFinish)[length(levels(fullTrain$GarageFinish))+1] = "None"
 fullTrain$GarageFinish[is.na(fullTrain$GarageFinish)]<-"None"
 
-dim(fullTrain[complete.cases(fullTrain),])
+paste("Complete observations coded for missing attributes: " , dim(fullTrain[complete.cases(fullTrain),])[1])
 ```
 ```{r,echo=FALSE}
 fullTest$LotFrontage[is.na(fullTest$LotFrontage)]<-0.0
@@ -138,16 +150,42 @@ fullTrain<-dplyr::select(fullTrain,-GarageYrBlt)
 
 ## Exploratory Data Analysis
 
+A summary of the data shows that many variables have levels with only a few observations in them. For example, the RoofMatl variable (which describes the material of the roof) has 8 different options, clay tile, standard composite shingle, membrane, metal, roll, gravel and tar, wood shakes, and wood shingles. However, out of all 1460 observations, clay tile, membrane, metal, and roll roofs only have one observation, wood shake has 5 observations, and wood shingle has 6.
+
+A similar pattern is true for many other categorical variables, where certain categories are very sparsely represented. This is potentially a problem for building cross validated models due to the fact that a model that is trained on a subset of the data is unlikely to see many examples of all categories and thus might be unable to accurately model the relationships between the categories and sale price. 
+ 
 ```{r}
 summary(fullTrain)
+```
 
+Then with some sata visualization we find that the sale price of homes has a positively skewed distribution, with the median sale price of a house (\$163,000.00) being significantly less than the average sale price of a house (\$180,921.20).
+```{r}
+options(scipen=5)
+
+ggplot(fullTrain, aes(SalePrice))+
+       geom_histogram(bins = 25)+
+       geom_vline(data = data.frame(SalePriceSummary = c("Mean Sale Price", "Median Sale Price"), Summary = c(mean(fullTrain$SalePrice),median(fullTrain$SalePrice))),
+                 aes(xintercept = Summary,
+                 linetype=SalePriceSummary,
+                 colour = SalePriceSummary),
+                 show.legend = TRUE)+
+       theme_few()
+```
+
+A boxplot comparing the sale prices for all of the different neighborhoods shows that there are some neighborhoods that clearly have much higher average and median sale prices than others. This indicates that Neighborhood is likely an importat indicator for sale price.
+```{r}
+ordered_names<-fullTrain %>% group_by(Neighborhood)%>%summarize(avg = mean(SalePrice)) %>% arrange(avg)
+fullTrain$Neighborhood <- factor(fullTrain$Neighborhood,
+    levels = ordered_names$Neighborhood,ordered = TRUE)
 ggplot(fullTrain, aes(x=Neighborhood,y=SalePrice))+
        geom_boxplot()+
        theme_few()+
-       theme(axis.text.x = element_text(angle = 90, hjust = 1))
-options(scipen=5)
-hist(fullTrain$SalePrice, xlab = "Sale Price", main = "Histogram of Sale Price")
+       coord_flip()
 
+```
+
+
+```{r}
 ggplot(fullTrain, aes(x=YearBuilt,y=SalePrice))+
        geom_point(alpha = 0.4)+
        theme_few()+
@@ -171,7 +209,9 @@ ggplot(aes(x=MoSold,y=NumSold, fill=MedianSalePrice))+
 
 ```
 
-To do a preliminary examination of the data, we wanted to do some dimensionality reduction to see if there were any obvious structures in the data.
+Then we started looking into answering our first research question: Are there natural clusters of houses that can be derived and explained from within the data and what do those clusters correspond to? 
+
+Our first approach to answering this question was to do some dimensionality reduction to see if there were any obvious structures in the data.
 
 First, we computed PCA on the data with two different algorithms, then plotted them. 
 ```{r}
@@ -247,7 +287,7 @@ ggplot(numeric_col_w_tsne, aes(x=tsne1,y=tsne2,col=log(GrLivArea)))+
 ```
 
 ## Removing NA values
-Because some predictive models don't allow for NA values and because every single observation has at least one NA value, we want to do some data imputation. The data was imputed using random forests. This imputed data can be used in conjunction with the one-hot encoded data to compare and contrast the various predictions.
+Because some predictive models don't allow for NA values, we want to do some data imputation. The data was imputed using random forests. This imputed data can be used in conjunction with the one-hot encoded data to compare and contrast the various predictions.
 
 ```{r, echo=F}
 imp <- mice(fullTrain,method='rf')
@@ -373,25 +413,23 @@ ggplot()+
 p1<-ggplot(fullTrain, aes(x=RoofMatl, y = SalePrice))+
   theme_few()+
   geom_boxplot()+
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  coord_flip()
 p2<-ggplot(fullTrain, aes(x=Condition2, y = SalePrice))+
   theme_few()+
   geom_boxplot()+
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-p3<-ggplot(fullTrain, aes(x=GarageQual, y = SalePrice))+
+  coord_flip()
+p3<-ggplot(fullTrain, aes(x=RoofStyle, y = SalePrice))+
   theme_few()+
   geom_boxplot()+
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-p4<-ggplot(fullTrain, aes(x=as.factor(BedroomAbvGr), y = SalePrice))+
+  coord_flip()
+p4<-ggplot(fullTrain, aes(x=PoolQC, y = SalePrice))+
   theme_few()+
-  labs(x= "BedroomsAbvGr")+
   geom_boxplot()+
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  coord_flip()
 
 grid.arrange(p1,p2,p3,p4,nrow=2,ncol=2)
 
 fullTrain %>% group_by(RoofMatl) %>% summarize(n_houses = n(), avg_sale_price = mean(SalePrice), med_sale_price = median(SalePrice))
-
 
 forward_subset<-regsubsets(SalePrice~.,data = one_hot_encoded_cc,method="forward")
 forward<-names(one_hot_encoded_cc)[summary(forward_subset)$which[5,]]
