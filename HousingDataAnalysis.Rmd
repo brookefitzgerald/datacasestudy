@@ -154,12 +154,12 @@ A summary of the data shows that many variables have levels with only a few obse
 
 A similar pattern is true for many other categorical variables, where certain categories are very sparsely represented. This is potentially a problem for building cross validated models due to the fact that a model that is trained on a subset of the data is unlikely to see many examples of all categories and thus might be unable to accurately model the relationships between the categories and sale price. 
  
-```{r}
+```{r summarize}
 summary(fullTrain)
 ```
 
-Then with some sata visualization we find that the sale price of homes has a positively skewed distribution, with the median sale price of a house (\$163,000.00) being significantly less than the average sale price of a house (\$180,921.20).
-```{r}
+Then with some data visualization we find that the sale price of homes has a positively skewed distribution, with the median sale price of a house (\$163,000.00) being significantly less than the average sale price of a house (\$180,921.20).
+```{r visualization}
 options(scipen=5)
 
 ggplot(fullTrain, aes(SalePrice))+
@@ -173,7 +173,7 @@ ggplot(fullTrain, aes(SalePrice))+
 ```
 
 A boxplot comparing the sale prices for all of the different neighborhoods shows that there are some neighborhoods that clearly have much higher average and median sale prices than others. This indicates that Neighborhood is likely an importat indicator for sale price.
-```{r}
+```{r neighborhoods}
 ordered_names<-fullTrain %>% group_by(Neighborhood)%>%summarize(avg = mean(SalePrice)) %>% arrange(avg)
 ordered_neighborhood_dfm <- data.frame(Neighborhood=factor(fullTrain$Neighborhood,
     levels = ordered_names$Neighborhood,ordered = TRUE),
@@ -187,7 +187,7 @@ ggplot(ordered_neighborhood_dfm, aes(x=Neighborhood,y=SalePrice))+
 ```
 
 We also wanted to see if which month a house was purchased in has any effect on the sale price of the house. Based on the plots of the number of sales per month, colored by the mean and median sale price for each month, it seems like house sale prices are lower and more frequent as the summer starts (April, May), but that buying a house in September is going to be much more expensive then during other months.
-```{r}
+```{r month_sold}
 p1<-fullTrain %>% group_by(MoSold) %>% summarize(NumSold=n(),MeanSalePrice=mean(SalePrice))%>%
   ggplot(aes(x=MoSold,y=NumSold, fill=MeanSalePrice))+
          geom_bar(stat='identity')+
@@ -202,7 +202,7 @@ grid.arrange(p1,p2,nrow=2)
 ```
 
 In the plots of sale price and the year built (YearBuilt), overall house quality (OverallQual), total number of rooms above ground (TotRmsAbvGrd), and above grade living area square feet (GrLivArea), it becomes clear that these three variables are positively correlated with sale price. 
-```{r}
+```{r scatter_plots}
 p1<-ggplot(fullTrain, aes(x=YearBuilt,y=SalePrice))+
        geom_point(alpha = 0.4)+
        theme_few()+
@@ -228,7 +228,7 @@ However, since correlation requires numeric variables, and since many of our var
 For example, the variable Street with its two possible factors 'Gravl' and 'Pave' becomes two variables: StreetGravl and StreetPave that are either 0 or 1. 
 
 With this new encoding we calculated the correlation and then plotted the variables with absolute correlation values larger than 0.5.
-```{r}
+```{r correlation}
 one_hot_encoded<- dummy.data.frame(fullTrain)
 one_hot_encoded_cc <- one_hot_encoded[complete.cases(one_hot_encoded),]
 
@@ -248,7 +248,7 @@ Then we started looking into answering our first research question: Are there na
 Our first approach to answering this question was to do some dimensionality reduction to see if there were any obvious structures in the data.
 
 First, we computed PCA on the data with two different algorithms, then plotted them. 
-```{r}
+```{r pca}
 numeric_columns_only <- fullTrain %>% select_if(is.numeric)
 numeric_full_columns_only <- numeric_columns_only[complete.cases(numeric_columns_only),]
 
@@ -274,7 +274,7 @@ ggplot(cols_w_prcmp, aes(x=princomp1, y=princomp2, col=MSSubClass))+
 
 Then we decided to compare dimensionality reduction of a t-SNE plot, which stands for t-distributed Stochastic Neighbor Embedding. It is a dimensionality reduction algorithm that embeds high dimensional data into a 2 dimensional space. There is a nice [R vignette about the package](https://cran.r-project.org/web/packages/tsne/tsne.pdf), a [blog post](https://www.codeproject.com/Tips/788739/Visualization-of-High-Dimensional-Data-using-t-SNE) about its use in R, and an [interactive visualization](http://distill.pub/2016/misread-tsne/) characterizing its strengths and weaknesses.
 
-```{r}
+```{r tsne}
 housing_tsne<-Rtsne(numeric_full_columns_only)
 
 numeric_col_w_tsne<- numeric_full_columns_only %>% mutate(tsne1 = housing_tsne$Y[,1],tsne2 = housing_tsne$Y[,2])
@@ -303,7 +303,7 @@ ggplot(numeric_col_w_tsne, aes(x=tsne1,y=tsne2,col=log(GrLivArea)))+
 ## Removing NA values
 Because some predictive models don't allow for NA values, we want to do some data imputation. The data was imputed using random forests. This imputed data can be used in conjunction with the one-hot encoded data to compare and contrast the various predictions.
 
-```{r, echo=F}
+```{r imputation, echo=F}
 imp <- mice(fullTrain,method='rf')
 imputed <- fullTrain
 
@@ -335,7 +335,7 @@ We did this by using the createDataPartition function from the caret package in 
 
 We created training and testing sets for the full data, the imputed data, the one hot encoded data, and the one hot encoded data with NA values removed.
 
-```{r}
+```{r partition_data}
 indices<- createDataPartition(fullTrain$SalePrice,p=0.75)$Resample1
 train.full<- fullTrain[indices,]
 test.full<-fullTrain[-indices,]
@@ -350,9 +350,9 @@ train.onehot.cc <-train.onehot[complete.cases(train.onehot),]
 test.onehot.cc <-test.onehot[complete.cases(test.onehot),]
 ```
 
-The first model we tried out was a simple decision tree. We created decision trees on all of our training sets and calculated the cross-validated RMSE for each. We also averaged the predictions from each decision tree and calculated the cross-validated RMSE for that. 
+The first model we tried out was a simple decision tree. We created decision trees on all of our training sets and calculated the cross-validated RMSE for each. We also averaged the predictions from each decision tree and calculated the cross-validated RMSE for that. Overall, the predictions from the decision trees were fairly accurate, but tended to try and fit the houses with smaller SalePrices, and therefore underpredc
 
-```{r}
+```{r decision_tree}
 tree.model.full <-rpart(SalePrice~.,train.full)
 tree.preds.full <- predict(tree.model.full, test.full)
 tree.RMSE.full <- sqrt(sum((tree.preds.full-test.full$SalePrice)^2))/length(tree.preds.full)
@@ -383,18 +383,25 @@ fancyRpartPlot(tree.model.imp)
 fancyRpartPlot(tree.model.onehot)
 ```
 
-```{r}
+```{r linear_model}
 lr.model.full <- lm(SalePrice~.,train.full, na.action = na.omit)
 lr.model.full$xlevels$RoofMatl <- union(lr.model.full$xlevels$RoofMatl, levels(test.full$RoofMatl))
 lr.model.full$xlevels$Exterior1st <- union(lr.model.full$xlevels$Exterior1st, levels(test.full$Exterior1st))
 lr.model.full$xlevels$Exterior2nd <- union(lr.model.full$xlevels$Exterior2nd, levels(test.full$Exterior2nd))
+lr.model.full$xlevels$Condition2 <- union(lr.model.full$xlevels$Condition2, levels(test.full$Condition2))
 lr.model.full$xlevels$ExterCond <- union(lr.model.full$xlevels$ExterCond, levels(test.full$ExterCond))
 lr.model.full$xlevels$Electrical <- union(lr.model.full$xlevels$Electrical, levels(test.full$Electrical))
+lr.model.full$xlevels$Neighborhood <- union(lr.model.full$xlevels$Neighborhood, levels(test.full$Neighborhood))
+lr.model.full$xlevels$RoofStyle <- union(lr.model.full$xlevels$RoofStyle, levels(test.full$RoofStyle))
+lr.model.full$xlevels$Functional <- union(lr.model.full$xlevels$Functional, levels(test.full$Functional))
+lr.model.full$xlevels$SaleType <- union(lr.model.full$xlevels$SaleType, levels(test.full$SaleType))
 lr.preds.full <- predict(lr.model.full,test.full)
 lr.RMSE.full <- sqrt(sum((lr.preds.full-test.full$SalePrice)^2,na.rm=TRUE))/length(lr.preds.full)
 lr.RMSE.full
 qplot(lr.preds.full,test.full$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Full Linear Model Predictions",y="Full Sale Price ")
 
+```
+```{r}
 lr.model.imp <- lm(SalePrice~.,train.imp)
 lr.model.imp$xlevels$Condition2 <- union(lr.model.imp$xlevels$Condition2, levels(test.imp$Condition2))
 lr.model.imp$xlevels$Exterior1st <- union(lr.model.imp$xlevels$Exterior1st, levels(test.imp$Exterior1st))
@@ -406,6 +413,9 @@ lr.model.imp$xlevels$Heating <- union(lr.model.imp$xlevels$Heating, levels(test.
 lr.model.imp$xlevels$Electrical <- union(lr.model.imp$xlevels$Electrical, levels(test.imp$Electrical))
 lr.model.imp$xlevels$MiscFeature <- union(lr.model.imp$xlevels$MiscFeature, levels(test.imp$MiscFeature))
 lr.model.imp$xlevels$ExterCond <- union(lr.model.imp$xlevels$ExterCond, levels(test.imp$ExterCond))
+lr.model.imp$xlevels$Neighborhood <- union(lr.model.imp$xlevels$Neighborhood, levels(test.imp$Neighborhood))
+lr.model.imp$xlevels$RoofStyle <- union(lr.model.imp$xlevels$RoofStyle, levels(test.imp$RoofStyle))
+lr.model.imp$xlevels$SaleType <- union(lr.model.imp$xlevels$SaleType, levels(test.imp$SaleType))
 lr.preds.imp <- predict(lr.model.imp,test.imp)
 lr.RMSE.imp <- sqrt(sum((lr.preds.imp-test.imp$SalePrice)^2,na.rm = TRUE))/length(lr.preds.imp)
 lr.RMSE.imp
@@ -446,6 +456,10 @@ p4<-ggplot(fullTrain, aes(x=PoolQC, y = SalePrice))+
   coord_flip()
 
 grid.arrange(p1,p2,p3,p4,nrow=2,ncol=2)
+
+```
+
+```{r subset_selection}
 
 fullTrain %>% group_by(RoofMatl) %>% summarize(n_houses = n(), avg_sale_price = mean(SalePrice), med_sale_price = median(SalePrice))
 
@@ -522,8 +536,8 @@ grid.arrange(p1,p2,p3,p4,ncol=2)
 
 ```
 
-we applied  Hierarchical clustering in order to classify our data into 5 clustersin hierarchy.This was to answer our second research questions "Are there intrinsic groupings/clusters of houses present in the data and what do these clusters represent?
-"we classified the clusters in 5 groups. The 5 groups represent a range of sale prices in which the dataset fall. The 4th group being the most expensive costing within the range between 300000(3e+05) to 400000(4e+05) with outliers that go beyond 600000(6e+05) while the cheapest group  is the 5th group ranging from 100000(1e+05) but less than 200000(2e+05). Moreover we checked the overall quality compared to the price and the 4th group having the highest quality ranging within 7 up to 10 while the 5th group had the lowest quality ranging within 2 up to 6 with a few outliers which have 7. Moreover, we checked as well the relationship betweenGrLivArea(Above grade (ground) living area square feet) and the sales price , we found that the 4th group's Gridliv area ranged between 1500 to 3500 with some outliers reaching to 4000 while the 5th group ranged between 500 to 2500.Interestingly,the second group's Gridliv area ranges between 1000 till almost 2000 however there are outliers that go beyond 5000.
+We applied hierarchical clustering in order to classify our data into 5 clusters. This was to answer our second research questions "Are there intrinsic groupings/clusters of houses present in the data and what do these clusters represent?
+"we classified the clusters in 5 groups. The 5 groups represent a range of sale prices in which the dataset fall. The 4th group being the most expensive costing within the range between 300000(3e+05) to 400000(4e+05) with outliers that go beyond 600000(6e+05) while the cheapest group  is the 5th group ranging from 100000(1e+05) but less than 200000(2e+05). Moreover we checked the overall quality compared to the price and the 4th group having the highest quality ranging within 7 up to 10 while the 5th group had the lowest quality ranging within 2 up to 6 with a few outliers which have 7. Moreover, we checked as well the relationship between GrLivArea(Above grade (ground) living area square feet) and the sales price , we found that the 4th group's Gridliv area ranged between 1500 to 3500 with some outliers reaching to 4000 while the 5th group ranged between 500 to 2500. Interestingly,the second group's Gridliv area ranges between 1000 till almost 2000 however there are outliers that go beyond 5000.
 ```{r}
 par(mar=rep(1, 4))
 d <- dist(one_hot_encoded_cc, method = "euclidean") # distance matrix
