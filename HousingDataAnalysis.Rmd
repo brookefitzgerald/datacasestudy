@@ -14,8 +14,9 @@ The dataset we set out to analyze was found on the Kaggle Competition: “House 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(scales)
 library(ggplot2)
-library(gpairs)
+library(GGally)
 library(ggthemes)
 library(MASS)
 library(dplyr)
@@ -174,7 +175,7 @@ ggplot(fullTrain, aes(SalePrice))+
 
 A boxplot comparing the sale prices for all of the different neighborhoods shows that there are some neighborhoods that clearly have much higher average and median sale prices than others. This indicates that Neighborhood is likely an importat indicator for sale price.
 ```{r neighborhoods}
-ordered_names<-fullTrain %>% group_by(Neighborhood)%>%summarize(avg = mean(SalePrice)) %>% arrange(avg)
+ordered_names<-fullTrain %>% group_by(Neighborhood)%>%summarize(avg = mean('SalePrice')) %>% arrange(avg)
 ordered_neighborhood_dfm <- data.frame(Neighborhood=factor(fullTrain$Neighborhood,
     levels = ordered_names$Neighborhood,ordered = TRUE),
     SalePrice = fullTrain$SalePrice)
@@ -248,15 +249,18 @@ Then we started looking into answering our first research question: Are there na
 Our first approach to answering this question was to do some dimensionality reduction to see if there were any obvious structures in the data.
 
 First, we computed PCA on the data with two different algorithms, then plotted them. 
+
+Sale price seems to almost exactly maps to the first principle component, and the second principle component is highly negatively correlated with LotArea. It is therefore obvious that much of the variation within this dataset is explained by these two variables. 
+
+Furthermore, MSSubClass (the type of dwelling involved in the sale) also has an interesting relationship with principal component 2. The MSSubClasses 120, 160, and 180 form a cluster in the higher values of the second principal component. MSSubClasses 120, 160, and 180 are the 3 types of dwellings that are planned unit developments - communities of homes that are operated by a homeowners association to provide amenities like parks, playgrounds, pools, tennis and basketball courts, hiking trails, private gated common land and street lights or the like.
+
 ```{r pca}
 numeric_columns_only <- fullTrain %>% select_if(is.numeric)
 numeric_full_columns_only <- numeric_columns_only[complete.cases(numeric_columns_only),]
 
-p<-pca(as.matrix(numeric_full_columns_only))
-
 x<-princomp(as.matrix(numeric_full_columns_only))
 
-numeric_col_w_prcmp <- numeric_full_columns_only %>% mutate(princomp1 = x$scores[,1], princomp2 = x$scores[,2], pca1 = p$scores[,1], pca2 = p$scores[,2])
+numeric_col_w_prcmp <- numeric_full_columns_only %>% mutate(princomp1 = x$scores[,1], princomp2 = x$scores[,2])
 
 cols_w_prcmp <- inner_join(numeric_col_w_prcmp, fullTrain)
 
@@ -264,15 +268,59 @@ outlier <- cols_w_prcmp %>% filter(princomp2<(-10000))
 
 cols_w_prcmp <- cols_w_prcmp %>% filter(princomp2>(-10000))
 
-ggplot(cols_w_prcmp, aes(x=pca1, y=pca2, col=MSSubClass))+
+p1<-ggplot(cols_w_prcmp, aes(x=princomp1, y=princomp2, col=log(SalePrice)))+
        geom_point(shape=21,alpha = .9)+
        theme_few()
-ggplot(cols_w_prcmp, aes(x=princomp1, y=princomp2, col=MSSubClass))+
+p2<-ggplot(cols_w_prcmp, aes(x=princomp1, y=princomp2, col=LotArea))+
        geom_point(shape=21,alpha = .9)+
        theme_few()
+p3<-qplot(princomp1,SalePrice,data = cols_w_prcmp)+theme_few()
+p4<-qplot(princomp2,LotArea,data = cols_w_prcmp)+theme_few()
+grid.arrange(p1,p2,p3,p4,ncol=2)
+
+ggplot(cols_w_prcmp, aes(x=princomp1, y=princomp2, col=factor(MSSubClass)))+
+       geom_point(shape=21,alpha = .9)+
+       theme_few()
+p1<-ggplot(aes(factor(MSSubClass), princomp2), data=cols_w_prcmp)+
+       geom_boxplot()+
+       theme_few()+
+       labs(x="MSSubClass")+
+       coord_flip()
+p2<-ggplot(fullTrain, aes(factor(MSSubClass), SalePrice))+
+       geom_boxplot()+
+       theme_few() +
+       labs(x="MSSubClass")+
+       coord_flip()
+
+grid.arrange(p1,p2,ncol=2)
+
+add_PUD <-function(MSSubClass){
+  pud <- numeric(length(MSSubClass))
+  for (i in 1:length(MSSubClass)){
+    if (MSSubClass[i] %in% c(120, 160, 180)){
+      pud[i] <- 1
+    }
+  }
+  return(pud)
+}
+fullTrain <- fullTrain %>% mutate(pud = add_PUD(MSSubClass))
+fullTest <- fullTest %>% mutate(pud = add_PUD(MSSubClass))
+
+cols_w_prcmp <- cols_w_prcmp %>% mutate(pud = add_PUD(MSSubClass))
+
+p1<-ggplot(aes(pud, princomp2, col=LotArea), data=cols_w_prcmp)+
+       geom_jitter()+
+       theme_few()+
+       labs(x="PUD")
+p2<-ggplot(cols_w_prcmp, aes(x=princomp1, y=princomp2, col=factor(pud)))+
+       geom_point(shape=21,alpha = .9)+
+       theme_few()
+grid.arrange(p1,p2)
 ```
 
 Then we decided to compare dimensionality reduction of a t-SNE plot, which stands for t-distributed Stochastic Neighbor Embedding. It is a dimensionality reduction algorithm that embeds high dimensional data into a 2 dimensional space. There is a nice [R vignette about the package](https://cran.r-project.org/web/packages/tsne/tsne.pdf), a [blog post](https://www.codeproject.com/Tips/788739/Visualization-of-High-Dimensional-Data-using-t-SNE) about its use in R, and an [interactive visualization](http://distill.pub/2016/misread-tsne/) characterizing its strengths and weaknesses.
+
+The t-SNE confirms many of the same things as the principal component analysis, namely that the majority of the variance in the dataset can be explained by the sale price (as well as variables that are correlated to the sale price like the overall quality). Also, when you plot variables that are uncorrelated with the SalePrice but correlated with the second principal component (like lot area and being a PUD) you see groupings on the outside of the main structure, and the occasional small cluster.
 
 ```{r tsne}
 housing_tsne<-Rtsne(numeric_full_columns_only)
@@ -284,21 +332,22 @@ cols_w_tsne <- inner_join(numeric_col_w_tsne, fullTrain)
 ggplot(cols_w_tsne, aes(x=tsne1,y=tsne2,col=log(SalePrice)))+
        geom_point()+
        theme_few()
-ggplot(cols_w_tsne, aes(x=tsne1,y=tsne2,col=MSSubClass))+
+ggplot(cols_w_tsne, aes(x=tsne1,y=tsne2,col=factor(OverallQual)))+
+       geom_point()+
+       theme_few()
+ggplot(cols_w_tsne, aes(x=tsne1,y=tsne2,col=log(LotArea)))+
+       geom_point()+
+       theme_few()
+
+ggplot(cols_w_tsne, aes(x=tsne1,y=tsne2,col=factor(pud)))+
        geom_point()+
        theme_few()
 ```
+## Conclusions for Research Question 1:
 
+From our analysis of reducing the dimensionality reduction of our data, it seems as though there are two main groupings within our data. The first is the price of the home. The sale price of a home is highly correlated with many other variables in the dataset and knowing the sale price can give you a good idea about other details of the home. The second main grouping is the amount of lot area/PUD status of a home. This grouping likely is a proxy for measuring how suburban a home is, because suburban homes are often PUDs that often have much more land then their city counterparts.
 
-```{r}
-housing_tsne<-Rtsne(one_hot_encoded_cc)
-
-numeric_col_w_tsne<- one_hot_encoded_cc %>% mutate(tsne1 = housing_tsne$Y[,1],tsne2 = housing_tsne$Y[,2])
-
-ggplot(numeric_col_w_tsne, aes(x=tsne1,y=tsne2,col=log(GrLivArea)))+
-       geom_point()+
-       theme_few()
-```
+The price and suburban-ness of a home make sense as good metrics for explaining the variation between homes because an expensive loft in the city is quite different than an expensive suburban home, as is an inexpensive suburban home from a inexpensive urban home. 
 
 ## Removing NA values
 Because some predictive models don't allow for NA values, we want to do some data imputation. The data was imputed using random forests. This imputed data can be used in conjunction with the one-hot encoded data to compare and contrast the various predictions.
@@ -395,6 +444,9 @@ lr.model.full$xlevels$Neighborhood <- union(lr.model.full$xlevels$Neighborhood, 
 lr.model.full$xlevels$RoofStyle <- union(lr.model.full$xlevels$RoofStyle, levels(test.full$RoofStyle))
 lr.model.full$xlevels$Functional <- union(lr.model.full$xlevels$Functional, levels(test.full$Functional))
 lr.model.full$xlevels$SaleType <- union(lr.model.full$xlevels$SaleType, levels(test.full$SaleType))
+lr.model.full$xlevels$HeatingQC <- union(lr.model.full$xlevels$HeatingQC, levels(test.full$HeatingQC))
+lr.model.full$xlevels$GarageQual <- union(lr.model.full$xlevels$GarageQual, levels(test.full$GarageQual))
+lr.model.full$xlevels$GarageCond <- union(lr.model.full$xlevels$GarageCond, levels(test.full$GarageCond))
 lr.preds.full <- predict(lr.model.full,test.full)
 lr.RMSE.full <- sqrt(sum((lr.preds.full-test.full$SalePrice)^2,na.rm=TRUE))/length(lr.preds.full)
 lr.RMSE.full
@@ -415,6 +467,9 @@ lr.model.imp$xlevels$MiscFeature <- union(lr.model.imp$xlevels$MiscFeature, leve
 lr.model.imp$xlevels$ExterCond <- union(lr.model.imp$xlevels$ExterCond, levels(test.imp$ExterCond))
 lr.model.imp$xlevels$Neighborhood <- union(lr.model.imp$xlevels$Neighborhood, levels(test.imp$Neighborhood))
 lr.model.imp$xlevels$RoofStyle <- union(lr.model.imp$xlevels$RoofStyle, levels(test.imp$RoofStyle))
+lr.model.imp$xlevels$HeatingQC <- union(lr.model.imp$xlevels$HeatingQC, levels(test.imp$HeatingQC))
+lr.model.imp$xlevels$GarageQual <- union(lr.model.imp$xlevels$GarageQual, levels(test.imp$GarageQual))
+lr.model.imp$xlevels$GarageCond <- union(lr.model.imp$xlevels$GarageCond, levels(test.imp$GarageCond))
 lr.model.imp$xlevels$SaleType <- union(lr.model.imp$xlevels$SaleType, levels(test.imp$SaleType))
 lr.preds.imp <- predict(lr.model.imp,test.imp)
 lr.RMSE.imp <- sqrt(sum((lr.preds.imp-test.imp$SalePrice)^2,na.rm = TRUE))/length(lr.preds.imp)
