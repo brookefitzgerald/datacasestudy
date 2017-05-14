@@ -175,38 +175,72 @@ ggplot(fullTrain, aes(SalePrice))+
 A boxplot comparing the sale prices for all of the different neighborhoods shows that there are some neighborhoods that clearly have much higher average and median sale prices than others. This indicates that Neighborhood is likely an importat indicator for sale price.
 ```{r}
 ordered_names<-fullTrain %>% group_by(Neighborhood)%>%summarize(avg = mean(SalePrice)) %>% arrange(avg)
-fullTrain$Neighborhood <- factor(fullTrain$Neighborhood,
-    levels = ordered_names$Neighborhood,ordered = TRUE)
-ggplot(fullTrain, aes(x=Neighborhood,y=SalePrice))+
+ordered_neighborhood_dfm <- data.frame(Neighborhood=factor(fullTrain$Neighborhood,
+    levels = ordered_names$Neighborhood,ordered = TRUE),
+    SalePrice = fullTrain$SalePrice)
+
+ggplot(ordered_neighborhood_dfm, aes(x=Neighborhood,y=SalePrice))+
        geom_boxplot()+
        theme_few()+
        coord_flip()
 
 ```
 
-
+We also wanted to see if which month a house was purchased in has any effect on the sale price of the house. Based on the plots of the number of sales per month, colored by the mean and median sale price for each month, it seems like house sale prices are lower and more frequent as the summer starts (April, May), but that buying a house in September is going to be much more expensive then during other months.
 ```{r}
-ggplot(fullTrain, aes(x=YearBuilt,y=SalePrice))+
+p1<-fullTrain %>% group_by(MoSold) %>% summarize(NumSold=n(),MeanSalePrice=mean(SalePrice))%>%
+  ggplot(aes(x=MoSold,y=NumSold, fill=MeanSalePrice))+
+         geom_bar(stat='identity')+
+         scale_x_continuous(breaks = 1:12)+
+         theme_few()
+p2<-fullTrain %>% group_by(MoSold) %>% summarize(NumSold=n(),MedianSalePrice=median(SalePrice))%>%
+  ggplot(aes(x=MoSold,y=NumSold, fill=MedianSalePrice))+
+         geom_bar(stat='identity')+
+         scale_x_continuous(breaks = 1:12)+
+         theme_few()
+grid.arrange(p1,p2,nrow=2)
+```
+
+In the plots of sale price and the year built (YearBuilt), overall house quality (OverallQual), total number of rooms above ground (TotRmsAbvGrd), and above grade living area square feet (GrLivArea), it becomes clear that these three variables are positively correlated with sale price. 
+```{r}
+p1<-ggplot(fullTrain, aes(x=YearBuilt,y=SalePrice))+
        geom_point(alpha = 0.4)+
        theme_few()+
-       theme(axis.text.x = element_text(angle = 90, hjust = 1))
-ggplot(fullTrain, aes(x=OverallQual,y=SalePrice))+
-       geom_jitter(alpha = 0.5)+
+       scale_x_continuous(breaks = seq(1872,2020,20))
+p2<-ggplot(fullTrain, aes(x=OverallQual,y=SalePrice))+
+       geom_jitter(alpha = 0.4)+
+       theme_few()+
+       scale_x_continuous(breaks = seq(0,10,1))
+p3<-ggplot(fullTrain, aes(x=TotRmsAbvGrd,y=SalePrice))+
+       geom_jitter(alpha = 0.4)+
+       theme_few()+
+       scale_x_continuous(breaks = seq(0,14,1))
+p4<-ggplot(fullTrain, aes(x = GrLivArea, y=SalePrice))+
+       geom_point(alpha = 0.4)+
        theme_few()
-ggplot(fullTrain, aes(x=TotRmsAbvGrd,y=SalePrice, col = OverallQual))+
-       geom_jitter(alpha = 0.7)+
-       theme_few()
-fullTrain %>% group_by(MoSold) %>% summarize(NumSold=n(),MeanSalePrice=mean(SalePrice))%>%
-ggplot(aes(x=MoSold,y=NumSold, fill=MeanSalePrice))+
-       geom_bar(stat='identity')+
-       scale_x_continuous(breaks = 1:12)+
-       theme_few()
-fullTrain %>% group_by(MoSold) %>% summarize(NumSold=n(),MedianSalePrice=median(SalePrice))%>%
-ggplot(aes(x=MoSold,y=NumSold, fill=MedianSalePrice))+
-       geom_bar(stat='identity')+
-       scale_x_continuous(breaks = 1:12)+
-       theme_few()
+grid.arrange(p1,p2,p3,p4,nrow=2)
 
+```
+Because year built, overall house quality, total number of rooms above ground, and above grade living area square feet seemed correlated with SalePrice, we wanted to definitively test said correlation and see if there are other variables that are highly correlated with SalePrice.
+
+However, since correlation requires numeric variables, and since many of our variables are factors, we decided to use a technique known as one hot variable encoding. With this technique, each variable with $n$ factors is expanded into $n$ variables that take the value 1 if the data has that factor and 0 otherwise. 
+
+For example, the variable Street with its two possible factors 'Gravl' and 'Pave' becomes two variables: StreetGravl and StreetPave that are either 0 or 1. 
+
+With this new encoding we calculated the correlation and then plotted the variables with absolute correlation values larger than 0.5.
+```{r}
+one_hot_encoded<- dummy.data.frame(fullTrain)
+one_hot_encoded_cc <- one_hot_encoded[complete.cases(one_hot_encoded),]
+
+corprice<-cor(one_hot_encoded_cc)[,"SalePrice"]
+corprice<-corprice[names(corprice)!="SalePrice"]
+sub_corprice <- na.omit(corprice[abs(corprice)>0.5])
+
+ggplot()+
+  geom_bar(aes(x=reorder(names(sub_corprice), -sub_corprice),sub_corprice),stat="identity")+
+  theme_few()+
+  coord_flip()+
+  labs(y="Correlation to SalePrice", x = "Variable")
 ```
 
 Then we started looking into answering our first research question: Are there natural clusters of houses that can be derived and explained from within the data and what do those clusters correspond to? 
@@ -255,26 +289,6 @@ ggplot(cols_w_tsne, aes(x=tsne1,y=tsne2,col=MSSubClass))+
        theme_few()
 ```
 
-Next we wanted to do some one hot variable encoding in order to test correlation between SalePrice and factor variables.
-```{r}
-one_hot_encoded<- dummy.data.frame(fullTrain)
-one_hot_encoded_cc <- one_hot_encoded[complete.cases(one_hot_encoded),]
-
-corprice<-cor(one_hot_encoded_cc)[,"SalePrice"]
-corprice<-corprice[names(corprice)!="SalePrice"]
-sub_corprice <- corprice[abs(corprice)>0.5]
-
-ggplot()+
-  geom_bar(aes(x=reorder(names(sub_corprice), -sub_corprice),sub_corprice),stat="identity")+
-  theme_few()+
-  coord_flip()+
-  labs(y="Correlation to SalePrice", x = "Variable")
-
-ggplot(one_hot_encoded_cc, aes(x=SalePrice,y=GrLivArea))+
-  geom_point()+
-  theme_few()
-```
-
 
 ```{r}
 housing_tsne<-Rtsne(one_hot_encoded_cc)
@@ -317,6 +331,10 @@ for(varName in imp$imp){
 ## Starting Predictive Modeling
 The first step in predictive modeling is splitting the data into training and test sets.
 
+We did this by using the createDataPartition function from the caret package in order to get training and testing sets that have values of SalePrice that are evenly split across the dataset.
+
+We created training and testing sets for the full data, the imputed data, the one hot encoded data, and the one hot encoded data with NA values removed.
+
 ```{r}
 indices<- createDataPartition(fullTrain$SalePrice,p=0.75)$Resample1
 train.full<- fullTrain[indices,]
@@ -332,37 +350,37 @@ train.onehot.cc <-train.onehot[complete.cases(train.onehot),]
 test.onehot.cc <-test.onehot[complete.cases(test.onehot),]
 ```
 
-The first model we tried out was a decision tree.
+The first model we tried out was a simple decision tree. We created decision trees on all of our training sets and calculated the cross-validated RMSE for each. We also averaged the predictions from each decision tree and calculated the cross-validated RMSE for that. 
 
 ```{r}
 tree.model.full <-rpart(SalePrice~.,train.full)
 tree.preds.full <- predict(tree.model.full, test.full)
 tree.RMSE.full <- sqrt(sum((tree.preds.full-test.full$SalePrice)^2))/length(tree.preds.full)
 tree.RMSE.full
-p1<-qplot(tree.preds.full,test.full$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Full Regression Tree Predictions",y="Sale Price ")
+p1<-qplot(tree.preds.full,test.full$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = paste("Full Regression Tree RMSE: ",tree.RMSE.full),y="Sale Price ")
 
 tree.model.onehot <-rpart(SalePrice~.,train.onehot)
 tree.preds.onehot <- predict(tree.model.onehot, test.onehot)
 tree.RMSE.onehot <- sqrt(sum((tree.preds.onehot-test.onehot$SalePrice)^2))/length(tree.preds.onehot)
 tree.RMSE.onehot
-p2<-qplot(tree.preds.onehot,test.onehot$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "One-hot Regression Tree Predictions",y="Sale Price ")
+p2<-qplot(tree.preds.onehot,test.onehot$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = paste("One-hot Regression Tree RMSE: ",tree.RMSE.onehot),y="Sale Price ")
 
 tree.model.imp <- rpart(SalePrice~.,train.imp)
 tree.preds.imp <- predict(tree.model.imp, test.imp)
 tree.RMSE.imp <- sqrt(sum((tree.preds.imp-test.imp$SalePrice)^2))/length(tree.preds.imp)
 tree.RMSE.imp
-p3<-qplot(tree.preds.imp,test.imp$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Imputed Regression Tree Predictions",y="Sale Price ")
+p3<-qplot(tree.preds.imp,test.imp$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = paste("Imputed Regression Tree RMSE: ",tree.RMSE.imp),y="Sale Price ")
 
 tree.preds.avg <- rowMeans(cbind(tree.preds.full,tree.preds.onehot,tree.preds.imp))
 tree.RMSE.avg <- sqrt(sum((tree.preds.avg-test.full$SalePrice)^2))/length(tree.preds.avg)
 tree.RMSE.avg
-p4<-qplot(tree.preds.avg,test.full$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Average Regression Tree Predictions",y="Sale Price ")
+p4<-qplot(tree.preds.avg,test.full$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = paste("Average Regression Tree RMSE: ",tree.RMSE.avg),y="Sale Price ")
 
 grid.arrange(p1,p2,p3,p4,ncol=2,nrow=2)
 
 fancyRpartPlot(tree.model.full)
-fancyRpartPlot(tree.model.onehot)
 fancyRpartPlot(tree.model.imp)
+fancyRpartPlot(tree.model.onehot)
 ```
 
 ```{r}
@@ -446,7 +464,6 @@ Below we applied the Bagging regression of Salesprice: nbagg =25(bootstrap repli
 
 # bagging regressionof Salesprice: nbagg =25(bbotstrap replications)
 
-##The kNN Algorithm
 ```{r}
 fullTrain.bagging<-bagging(SalePrice~.,data=fullTrain,coob=TRUE,na.action = na.omit)
 print(fullTrain.bagging)
@@ -461,24 +478,47 @@ summary(fullTrain_SalePrice)
 
 # KNN regression
 ```{r}
-train.onehot<- train.onehot[complete.cases(train.onehot),]
-test.onehot<- test.onehot[complete.cases(test.onehot),]
-fullTrain_knn3<-knnreg(train.onehot[-306],train.onehot$SalePrice, k=3);
+fullTrain_knn3<-knnreg(train.onehot.cc[-306],train.onehot.cc$SalePrice, k=3);
 summary(fullTrain_knn3)
-#plot(test.onehot$SalePrice,predict(fullTrain_knn3,test.onehot[-306]))
-(predict(fullTrain_knn3,test.onehot[-306]))
+#plot(test.onehot.cc$SalePrice,predict(fullTrain_knn3,test.onehot.cc[-306]))
+knn.3.preds<-predict(fullTrain_knn3,test.onehot.cc[-306])
+knn.3.RMSE<-sqrt(sum((knn.3.preds-test.onehot.cc$SalePrice)^2))/length(test.onehot.cc)
+knn.3.RMSE
+
 #using k =5
-fullTrain_knn5<-knnreg(train.onehot[-306],train.onehot$SalePrice, k=5);
+fullTrain_knn5<-knnreg(train.onehot.cc[-306],train.onehot.cc$SalePrice, k=5);
 summary(fullTrain_knn5)
-summary(test.onehot$SalePrice,predict(fullTrain_knn5,test.onehot[-306]))
-sd(test.onehot$SalePrice,predict(fullTrain_knn5,test.onehot[-306]))
-print(predict(fullTrain_knn5,test.onehot[-306]))
-plot(test.onehot$SalePrice,predict(fullTrain_knn5,test.onehot[-306]))
+knn.5.preds<-predict(fullTrain_knn5,test.onehot.cc[-306])
+knn.5.RMSE<-sqrt(sum((knn.5.preds-test.onehot.cc$SalePrice)^2))/length(test.onehot.cc)
+knn.5.RMSE
+  
+sd(test.onehot.cc$SalePrice,predict(fullTrain_knn5,test.onehot.cc[-306]))
+print(predict(fullTrain_knn5,test.onehot.cc[-306]))
+plot(test.onehot.cc$SalePrice,predict(fullTrain_knn5,test.onehot.cc[-306]))
+
 #using k =19
-fullTrain_knn19<-knnreg(train.onehot[-306],train.onehot$SalePrice, k=19);
-summary(test.onehot$SalePrice,predict(fullTrain_knn19,test.onehot[-306]))
-sd(test.onehot$SalePrice,predict(fullTrain_knn19,test.onehot[-306]))
-plot(test.onehot$SalePrice,predict(fullTrain_knn15,test.onehot[-306]))
+fullTrain_knn19<-knnreg(train.onehot.cc[-306],train.onehot.cc$SalePrice, k=20);
+knn.19.preds <-predict(fullTrain_knn19,test.onehot.cc[-306])
+knn.19.preds<-predict(fullTrain_knn19,test.onehot.cc[-306])
+knn.19.RMSE<-sqrt(sum((knn.19.preds-test.onehot.cc$SalePrice)^2))/length(test.onehot.cc)
+knn.19.RMSE
+
+summary(test.onehot.cc$SalePrice,predict(fullTrain_knn19,test.onehot.cc[-306]))
+sd(test.onehot.cc$SalePrice,predict(fullTrain_knn19,test.onehot.cc[-306]))
+plot(test.onehot.cc$SalePrice,predict(fullTrain_knn19,test.onehot.cc[-306]))
+
+#using k =50
+fullTrain_knn50<-knnreg(train.onehot.cc[-306],train.onehot.cc$SalePrice, k=50);
+knn.50.preds <-predict(fullTrain_knn50,test.onehot.cc[-306])
+knn.50.preds<-predict(fullTrain_knn50,test.onehot.cc[-306])
+knn.50.RMSE<-sqrt(sum((knn.50.preds-test.onehot.cc$SalePrice)^2))/length(test.onehot.cc)
+knn.50.RMSE
+
+p1<-qplot(test.onehot.cc$SalePrice,knn.3.preds)+theme_few()+geom_abline(slope = 1, intercept = 0) + labs(x="Actual Sale Price",y="Predictions, k=3",title=paste("RMSE: ",knn.3.RMSE))
+p2<-qplot(test.onehot.cc$SalePrice,knn.5.preds)+theme_few()+geom_abline(slope = 1, intercept = 0) + labs(x="Actual Sale Price",y="Predictions, k=5",title=paste("RMSE: ",knn.5.RMSE))
+p3<-qplot(test.onehot.cc$SalePrice,knn.19.preds)+theme_few()+geom_abline(slope = 1, intercept = 0) + labs(x="Actual Sale Price",y="Predictions, k=19",title=paste("RMSE: ",knn.19.RMSE))
+p4<-qplot(test.onehot.cc$SalePrice,knn.50.preds)+theme_few()+geom_abline(slope = 1, intercept = 0) + labs(x="Actual Sale Price",y="Predictions, k=50",title=paste("RMSE: ",knn.50.RMSE))
+grid.arrange(p1,p2,p3,p4,ncol=2)
 
 ```
 
