@@ -21,11 +21,15 @@ library(gam)
 library(mice)
 library(ipred)
 library(kknn)
-require(graphics)
+library(randomForest)
+library(Metrics)
+library(caret)
+library(graphics)
 library(rattle)
 library(gridExtra)
 library(leaps)
 library(glmnet)
+set.seed(3000)
 ```
 
 ## Loading and cleaning the data
@@ -319,20 +323,17 @@ grid.arrange(p1,p2,p3,p4,ncol=2,nrow=2)
 fancyRpartPlot(tree.model.full)
 fancyRpartPlot(tree.model.onehot)
 fancyRpartPlot(tree.model.imp)
+```
 
+```{r}
 lr.model.full <- lm(SalePrice~.,train.full, na.action = na.omit)
-lr.model.full$xlevels$Condition2 <- union(lr.model.full$xlevels$Condition2, levels(test.full$Condition2))
 lr.model.full$xlevels$RoofMatl <- union(lr.model.full$xlevels$RoofMatl, levels(test.full$RoofMatl))
-lr.model.full$xlevels$BsmtCond <- union(lr.model.full$xlevels$BsmtCond, levels(test.full$BsmtCond))
-lr.model.full$xlevels$Heating <- union(lr.model.full$xlevels$Heating, levels(test.full$Heating))
-lr.model.full$xlevels$Electrical <- union(lr.model.full$xlevels$Electrical, levels(test.full$Electrical))
-lr.model.full$xlevels$MiscFeature <- union(lr.model.full$xlevels$MiscFeature, levels(test.full$MiscFeature))
 lr.model.full$xlevels$Exterior1st <- union(lr.model.full$xlevels$Exterior1st, levels(test.full$Exterior1st))
 lr.model.full$xlevels$Exterior2nd <- union(lr.model.full$xlevels$Exterior2nd, levels(test.full$Exterior2nd))
-lr.model.full$xlevels$Functional <- union(lr.model.full$xlevels$Functional, levels(test.full$Functional))
-
+lr.model.full$xlevels$ExterCond <- union(lr.model.full$xlevels$ExterCond, levels(test.full$ExterCond))
+lr.model.full$xlevels$Electrical <- union(lr.model.full$xlevels$Electrical, levels(test.full$Electrical))
 lr.preds.full <- predict(lr.model.full,test.full)
-lr.RMSE.full <- sqrt(sum((lr.preds.full-test.full$SalePrice)^2))/length(lr.preds.full)
+lr.RMSE.full <- sqrt(sum((lr.preds.full-test.full$SalePrice)^2,na.rm=TRUE))/length(lr.preds.full)
 lr.RMSE.full
 qplot(lr.preds.full,test.full$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Full Linear Model Predictions",y="Full Sale Price ")
 
@@ -346,14 +347,15 @@ lr.model.imp$xlevels$BsmtCond <- union(lr.model.imp$xlevels$BsmtCond, levels(tes
 lr.model.imp$xlevels$Heating <- union(lr.model.imp$xlevels$Heating, levels(test.imp$Heating))
 lr.model.imp$xlevels$Electrical <- union(lr.model.imp$xlevels$Electrical, levels(test.imp$Electrical))
 lr.model.imp$xlevels$MiscFeature <- union(lr.model.imp$xlevels$MiscFeature, levels(test.imp$MiscFeature))
+lr.model.imp$xlevels$ExterCond <- union(lr.model.imp$xlevels$ExterCond, levels(test.imp$ExterCond))
 lr.preds.imp <- predict(lr.model.imp,test.imp)
-lr.RMSE.imp <- sqrt(sum((lr.preds.imp-test.imp$SalePrice)^2))/length(lr.preds.imp)
+lr.RMSE.imp <- sqrt(sum((lr.preds.imp-test.imp$SalePrice)^2,na.rm = TRUE))/length(lr.preds.imp)
 lr.RMSE.imp
-qplot(lr.preds.imp,test.imp$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Imputed Linear Model Predictions",y="Imputed Sale Price ")
+qplot(lr.preds.imp,test.imp$SalePrice[!is.na(lr.preds.imp)])+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Imputed Linear Model Predictions",y="Imputed Sale Price ")
 
 lr.model.onehot <- lm(SalePrice~.,train.onehot, na.action = na.omit)
 lr.preds.onehot <- predict(lr.model.onehot,test.onehot)
-lr.RMSE.onehot <- sqrt(sum((lr.preds.onehot-test.onehot$SalePrice)^2))/length(lr.preds.onehot)
+lr.RMSE.onehot <- sqrt(sum((lr.preds.onehot-test.onehot$SalePrice)^2,na.rm=T))/length(lr.preds.onehot)
 lr.RMSE.onehot
 qplot(lr.preds.onehot,test.onehot$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "One-hot Linear Model Predictions",y="One-hot Sale Price ")
 
@@ -365,9 +367,8 @@ sig_coefficients<-lr.model.onehot$coefficients[significant_vars]
 ggplot()+
   geom_bar(aes(x=reorder(names(sig_coefficients), -sig_coefficients),sig_coefficients),stat="identity")+
   theme_few()+
-  labs(y="Linear Model Coefficients", x = "Variable")+
+  labs(title = "Significant p<0.01 One-Hot Encoded Coefficients",y="Linear Model Coefficients", x = "Variable")+
   coord_flip()
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 p1<-ggplot(fullTrain, aes(x=RoofMatl, y = SalePrice))+
   theme_few()+
@@ -402,8 +403,14 @@ data.frame("Variable Importance Rank"=1:6,
            "Forward Selected Variables" = names(one_hot_encoded_cc)[summary(forward_subset)$which[5,]], 
            "Backward Selected Variables" = names(one_hot_encoded_cc)[summary(backward_subset)$which[5,]])
 ```
+<<<<<<< HEAD
 Below we applied the Bagging regression of Salesprice: nbagg =25(bootstrap replications i.e samples to replicate.)Bagging regression also known as  (bootstrap aggregating) was introduced by Breiman (1 996a) to reduce the variance of a predictor( Buhlmann & Yu,2002) In our case applying the Bagging regression on the predictor sale price will reduce its variance and improve its mean squared error. after applying the bagging regression, the Out-of-bag estimate of root mean squared error is 36260.96, the mean is 180827and there have been 25 samples which were replicated
 =======
+=======
+# bagging regressionof Salesprice: nbagg =25(bbotstrap replications)
+
+##The kNN Algorithm
+>>>>>>> origin/master
 ```{r}
 fullTrain.bagging<-bagging(SalePrice~.,data=fullTrain,coob=TRUE,na.action = na.omit)
 print(fullTrain.bagging)
@@ -465,5 +472,162 @@ ggplot(h_clust_data, aes(OverallQual,SalePrice,col=h_clust))+
   theme_few()
 
 ```
+<<<<<<< HEAD
 References
 Peter Buhlmann & Bin Yu,2002,Analyzing Bagging
+=======
+
+
+#Random Forests
+
+
+
+#first we define multiplot function which will be used afterwards
+```{r}
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+  plots <- c(list(...), plotlist)
+  numPlots = length(plots)
+  if (is.null(layout)) {
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+  if (numPlots==1) {
+    print(plots[[1]])
+  } else {
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    for (i in 1:numPlots) {
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
+```    
+
+#i still need to change it for the actual data
+```{r}
+train <- read.csv("cleanedData.csv")
+train
+
+str(train)
+
+#View sale price since there are many NA values we only need to keep rows 1 - 1460
+train$SalePrice
+
+#training predictors
+trainX = train[1:1460,3:81]
+#training targets
+trainY = train[1:1460,82]
+#Combine training predictors and targets
+trainXY = cbind(trainX,"SalePrice" = trainY)
+#"GarageYrBlt" has 104 levels...way too many for a random forest model so 
+# we fix that by treating "GarageYrBlt" as a continuous predictor
+str(trainXY)
+trainXY$GarageYrBlt = as.numeric(trainXY$GarageYrBlt)
+trainX$GarageYrBlt = as.numeric(trainX$GarageYrBlt)
+```
+
+
+```{r}
+#5-fold cross validation
+set.seed(100)
+folds = createFolds(trainXY$SalePrice,k = 5)
+train1 = trainXY[-folds[[1]],1:80]
+train2 = trainXY[-folds[[2]],1:80]
+train3 = trainXY[-folds[[3]],1:80]
+train4 = trainXY[-folds[[4]],1:80]
+train5 = trainXY[-folds[[5]],1:80]
+
+#cross validation "test" set (including the target value "SalePrice")
+cvTest1 = trainXY[folds[[1]],1:80]
+cvTest2 = trainXY[folds[[2]],1:80]
+cvTest3 = trainXY[folds[[3]],1:80]
+cvTest4 = trainXY[folds[[4]],1:80]
+cvTest5 = trainXY[folds[[5]],1:80]
+
+#Build 5 models
+modelRF1 = randomForest(SalePrice ~ ., data = train1)
+modelRF2 = randomForest(SalePrice ~ ., data = train2)
+modelRF3 = randomForest(SalePrice ~ ., data = train3)
+modelRF4 = randomForest(SalePrice ~ ., data = train4)
+modelRF5 = randomForest(SalePrice ~ ., data = train5)
+
+#Make predictions using cross validation "test" sets
+Pred1 = predict(modelRF1, cvTest1)
+Pred2 = predict(modelRF2, cvTest2)
+Pred3 = predict(modelRF3, cvTest3)
+Pred4 = predict(modelRF4, cvTest4)
+Pred5 = predict(modelRF5, cvTest5)
+
+#Plot target vs. predicted for the 5 models
+tp1 = ggplot(data = as.data.frame(cbind("Target" = cvTest1$SalePrice,"Predicted" = Pred1)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
+tp2 = ggplot(data = as.data.frame(cbind("Target" = cvTest2$SalePrice,"Predicted" = Pred2)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
+tp3 = ggplot(data = as.data.frame(cbind("Target" = cvTest3$SalePrice,"Predicted" = Pred3)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
+tp4 = ggplot(data = as.data.frame(cbind("Target" = cvTest4$SalePrice,"Predicted" = Pred4)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
+tp5 = ggplot(data = as.data.frame(cbind("Target" = cvTest5$SalePrice,"Predicted" = Pred5)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
+multiplot(tp1,tp2,tp3,tp4,tp5,cols = 2)
+
+```
+
+```{r}
+#Calculate residuals
+Res1 = cvTest1$SalePrice - Pred1
+Res2 = cvTest2$SalePrice - Pred2
+Res3 = cvTest3$SalePrice - Pred3
+Res4 = cvTest4$SalePrice - Pred4
+Res5 = cvTest5$SalePrice - Pred5
+
+
+#Calculate RMSE
+rmse1 = rmse(cvTest1$SalePrice,Pred1)
+rmse2 = rmse(cvTest2$SalePrice,Pred2)
+rmse3 = rmse(cvTest3$SalePrice,Pred3)
+rmse4 = rmse(cvTest4$SalePrice,Pred4)
+rmse5 = rmse(cvTest5$SalePrice,Pred5)
+cbind(rmse1,rmse2,rmse3,rmse4,rmse5)
+
+#feature importance
+Imp1 = as.data.frame(modelRF1$importance)
+Imp1$Predictor = rownames(Imp1)
+Imp1 = Imp1[,c(2,1)]
+rownames(Imp1) = c(1:nrow(Imp1))
+colnames(Imp1)[2] = "Importance"
+ImpOrd1 = Imp1[order(Imp1$Importance, decreasing = TRUE),]
+
+Imp2 = as.data.frame(modelRF2$importance)
+Imp2$Predictor = rownames(Imp2)
+Imp2 = Imp2[,c(2,1)]
+rownames(Imp2) = c(1:nrow(Imp2))
+colnames(Imp2)[2] = "Importance"
+ImpOrd2 = Imp2[order(Imp2$Importance, decreasing = TRUE),]
+
+Imp3 = as.data.frame(modelRF3$importance)
+Imp3$Predictor = rownames(Imp3)
+Imp3 = Imp3[,c(2,1)]
+rownames(Imp3) = c(1:nrow(Imp3))
+colnames(Imp3)[2] = "Importance"
+ImpOrd3 = Imp3[order(Imp3$Importance, decreasing = TRUE),]
+
+Imp4 = as.data.frame(modelRF4$importance)
+Imp4$Predictor = rownames(Imp4)
+Imp4 = Imp4[,c(2,1)]
+rownames(Imp4) = c(1:nrow(Imp4))
+colnames(Imp4)[2] = "Importance"
+ImpOrd4 = Imp4[order(Imp4$Importance, decreasing = TRUE),]
+
+Imp5 = as.data.frame(modelRF5$importance)
+Imp5$Predictor = rownames(Imp5)
+Imp5 = Imp5[,c(2,1)]
+rownames(Imp5) = c(1:nrow(Imp5))
+colnames(Imp5)[2] = "Importance"
+ImpOrd5 = Imp5[order(Imp5$Importance, decreasing = TRUE),]
+
+cbind(ImpOrd1,ImpOrd2,ImpOrd3,ImpOrd4,ImpOrd5)
+```
+
+=======
+>>>>>>> origin/master
+>>>>>>> origin/master
