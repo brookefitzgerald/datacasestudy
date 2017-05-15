@@ -474,7 +474,7 @@ data.frame("Variable Importance Rank"=1:6,
            "Backward Selected Variables" = names(one_hot_encoded_cc)[summary(backward_subset)$which[5,]])
 ```
 
-Below we applied the KNN regression on the SalePrice; we assumed 3 values of k which are 3,5,19 and 50. Among the 4 values,3 had the least root mean square error(RMSE). We went ahead and drew a qplot to illustrate the pattern of k from 1 to 50 and its corresponding RMSE. According to the graph, 6 is the value of k with the least RMSE hence the most accurate in comparison to the others.
+Below we applied the KNN regression on the SalePrice. The regression is basically fitting the best line to predict the SalePrice between neighbouring houses. we assumed 3 values of k which are 3,5,19 and 50. Among the 4 values,3 had the least root mean square error(RMSE). We went ahead and drew a qplot to illustrate the pattern of k from 1 to 50 and its corresponding RMSE. According to the graph, 6 is the value of k with the least RMSE hence the most accurate in comparison to the others.Above 6,The RMSE gradually increase with the increasing value of k.
 # KNN regression
 ```{r}
 fullTrain_knn3<-knnreg(train.onehot.cc[-306],train.onehot.cc$SalePrice, k=3);
