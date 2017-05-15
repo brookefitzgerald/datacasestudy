@@ -604,44 +604,31 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 
 #i still need to change it for the actual data
 ```{r}
-train <- read.csv("cleanedData.csv")
-train
 
-str(train)
 
-#View sale price since there are many NA values we only need to keep rows 1 - 1460
-train$SalePrice
 
-#training predictors
-trainX = train[1:1460,3:81]
-#training targets
-trainY = train[1:1460,82]
-#Combine training predictors and targets
-trainXY = cbind(trainX,"SalePrice" = trainY)
-#"GarageYrBlt" has 104 levels...way too many for a random forest model so 
-# we fix that by treating "GarageYrBlt" as a continuous predictor
-str(trainXY)
-trainXY$GarageYrBlt = as.numeric(trainXY$GarageYrBlt)
-trainX$GarageYrBlt = as.numeric(trainX$GarageYrBlt)
+
 ```
 
 
 ```{r}
 #5-fold cross validation
 set.seed(100)
-folds = createFolds(trainXY$SalePrice,k = 5)
-train1 = trainXY[-folds[[1]],1:80]
-train2 = trainXY[-folds[[2]],1:80]
-train3 = trainXY[-folds[[3]],1:80]
-train4 = trainXY[-folds[[4]],1:80]
-train5 = trainXY[-folds[[5]],1:80]
+fullTrain<-fullTrain[complete.cases(fullTrain),]
+
+folds = createFolds(fullTrain$SalePrice,k = 5)
+train1 = fullTrain[-folds[[1]],1:80]
+train2 = fullTrain[-folds[[2]],1:80]
+train3 = fullTrain[-folds[[3]],1:80]
+train4 = fullTrain[-folds[[4]],1:80]
+train5 = fullTrain[-folds[[5]],1:80]
 
 #cross validation "test" set (including the target value "SalePrice")
-cvTest1 = trainXY[folds[[1]],1:80]
-cvTest2 = trainXY[folds[[2]],1:80]
-cvTest3 = trainXY[folds[[3]],1:80]
-cvTest4 = trainXY[folds[[4]],1:80]
-cvTest5 = trainXY[folds[[5]],1:80]
+cvTest1 = fullTrain[folds[[1]],]
+cvTest2 = fullTrain[folds[[2]],]
+cvTest3 = fullTrain[folds[[3]],]
+cvTest4 = fullTrain[folds[[4]],]
+cvTest5 = fullTrain[folds[[5]],]
 
 #Build 5 models
 modelRF1 = randomForest(SalePrice ~ ., data = train1)
@@ -657,24 +644,12 @@ Pred3 = predict(modelRF3, cvTest3)
 Pred4 = predict(modelRF4, cvTest4)
 Pred5 = predict(modelRF5, cvTest5)
 
-#Plot target vs. predicted for the 5 models
-tp1 = ggplot(data = as.data.frame(cbind("Target" = cvTest1$SalePrice,"Predicted" = Pred1)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
-tp2 = ggplot(data = as.data.frame(cbind("Target" = cvTest2$SalePrice,"Predicted" = Pred2)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
-tp3 = ggplot(data = as.data.frame(cbind("Target" = cvTest3$SalePrice,"Predicted" = Pred3)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
-tp4 = ggplot(data = as.data.frame(cbind("Target" = cvTest4$SalePrice,"Predicted" = Pred4)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
-tp5 = ggplot(data = as.data.frame(cbind("Target" = cvTest5$SalePrice,"Predicted" = Pred5)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
-multiplot(tp1,tp2,tp3,tp4,tp5,cols = 2)
-
-```
-
-```{r}
 #Calculate residuals
 Res1 = cvTest1$SalePrice - Pred1
 Res2 = cvTest2$SalePrice - Pred2
 Res3 = cvTest3$SalePrice - Pred3
 Res4 = cvTest4$SalePrice - Pred4
 Res5 = cvTest5$SalePrice - Pred5
-
 
 #Calculate RMSE
 rmse1 = rmse(cvTest1$SalePrice,Pred1)
@@ -683,6 +658,18 @@ rmse3 = rmse(cvTest3$SalePrice,Pred3)
 rmse4 = rmse(cvTest4$SalePrice,Pred4)
 rmse5 = rmse(cvTest5$SalePrice,Pred5)
 cbind(rmse1,rmse2,rmse3,rmse4,rmse5)
+
+#Plot target vs. predicted for the 5 models
+tp1 = ggplot(data = as.data.frame(cbind("Target" = cvTest1$SalePrice,"Predicted" = Pred1)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle(paste("RMSE: ",rmse1))
+tp2 = ggplot(data = as.data.frame(cbind("Target" = cvTest2$SalePrice,"Predicted" = Pred2)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle(paste("RMSE: "),rmse2)
+tp3 = ggplot(data = as.data.frame(cbind("Target" = cvTest3$SalePrice,"Predicted" = Pred3)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle(paste("RMSE: ",rmse3))
+tp4 = ggplot(data = as.data.frame(cbind("Target" = cvTest4$SalePrice,"Predicted" = Pred4)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle(paste("RMSE: ", rmse4))
+tp5 = ggplot(data = as.data.frame(cbind("Target" = cvTest5$SalePrice,"Predicted" = Pred5)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle(paste("RMSE: ",rmse5))
+grid.arrange(tp1,tp2,tp3,tp4,tp5,ncol = 2)
+
+```
+
+```{r}
 
 #feature importance
 Imp1 = as.data.frame(modelRF1$importance)
