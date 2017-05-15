@@ -474,7 +474,9 @@ data.frame("Variable Importance Rank"=1:6,
            "Backward Selected Variables" = names(one_hot_encoded_cc)[summary(backward_subset)$which[5,]])
 ```
 
-Below we applied the KNN regression on the SalePrice. The regression is basically fitting the best line to predict the SalePrice between neighbouring houses. we assumed 4 values of k which are 3,5,19 and 50. Among the 4 values,3 had the least root mean square error(RMSE). We went ahead and drew a qplot to illustrate the pattern of k from 1 to 50 and its corresponding RMSE. According to the graph, 6 is the value of k with the least RMSE hence the most accurate in comparison to the others.Above 6,The RMSE gradually increase with the increasing value of k.
+Below we applied the KNN regression on the SalePrice. The regression is basically fitting the best line to predict the SalePrice between neighbouring houses. we assumed 4 values of k which are 3,5,19 and 50. Among the 4 values,3 had the least root mean square error(RMSE). 
+
+We went ahead and drew a qplot to illustrate the pattern of k from 1 to 50 and its corresponding RMSE. According to the graph, 6 is the value of k with the least RMSE hence the most accurate in comparison to the others.Above 6,The RMSE gradually increase with the increasing value of k hence overfitting.
 # KNN regression
 ```{r}
 fullTrain_knn3<-knnreg(train.onehot.cc[-306],train.onehot.cc$SalePrice, k=3);
@@ -529,7 +531,10 @@ qplot(1:50,RMSES)+theme_few()+labs(title = paste("Minimum RMSE at: ",which.min(R
 ```
 
 We applied hierarchical clustering in order to classify our data into 5 clusters. This was to answer our second research questions "Are there intrinsic groupings/clusters of houses present in the data and what do these clusters represent?
-"we classified the clusters in 5 groups. The 5 groups represent a range of sale prices in which the dataset fall. The 4th group being the most expensive costing within the range between 300000(3e+05) to 400000(4e+05) with outliers that go beyond 600000(6e+05) while the cheapest group  is the 5th group ranging from 100000(1e+05) but less than 200000(2e+05). Moreover we checked the overall quality compared to the price and the 4th group having the highest quality ranging within 7 up to 10 while the 5th group had the lowest quality ranging within 2 up to 6 with a few outliers which have 7. Moreover, we checked as well the relationship between GrLivArea(Above grade (ground) living area square feet) and the sales price , we found that the 4th group's Gridliv area ranged between 1500 to 3500 with some outliers reaching to 4000 while the 5th group ranged between 500 to 2500. Interestingly,the second group's Gridliv area ranges between 1000 till almost 2000 however there are outliers that go beyond 5000.
+
+"we classified the clusters in 5 groups. The 5 groups represent a range of sale prices in which the dataset fall. The 4th group being the most expensive costing within the range between 300000(3e+05) to 400000(4e+05) with outliers that go beyond 600000(6e+05) while the cheapest group  is the 5th group ranging from 100000(1e+05) but less than 200000(2e+05). Moreover we checked the overall quality compared to the price and the 4th group having the highest quality ranging within 7 up to 10 while the 5th group had the lowest quality ranging within 2 up to 6 with a few outliers which have 7.
+
+Moreover, we checked as well the relationship between GrLivArea(Above grade (ground) living area square feet) and the sales price , we found that the 4th group's Gridliv area ranged between 1500 to 3500 with some outliers reaching to 4000 while the 5th group ranged between 500 to 2500. Interestingly,the second group's Gridliv area ranges between 1000 till almost 2000 however there are outliers that go beyond 5000.
 ```{r}
 par(mar=rep(1, 4))
 d <- dist(one_hot_encoded_cc, method = "euclidean") # distance matrix
