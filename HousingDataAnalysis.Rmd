@@ -460,19 +460,23 @@ ggplot()+
 
 ```
 
+Forward and backward subset selection was also used to shed some insight on our first research question. Both forward and backward selection selected the house id, overall condition, and garage area as the top 1st, 2nd, and 5th of the top five predictive variables. 	Where they differ is that the forward subset selection seems to select variables concerning the basement of the house, while the backward subset selection seems to select variables relating to the square feet of the house and also the kitchen quality.
+
+These selected variables should be taken with a grain of salt because the same non-sparse variable selection process was used as with the linear models, but forward and backward subset selection identify variables that weren't identified as important by any other method. Because there are so many variables, it is too computationally intensive to calculate the best subset selection, but it is likely that forward and backward subset selection with this many variables is identifying a non-optimal solution.
+
 ```{r subset_selection}
 
 fullTrain %>% group_by(RoofMatl) %>% summarize(n_houses = n(), avg_sale_price = mean(SalePrice), med_sale_price = median(SalePrice))
 
-forward_subset<-regsubsets(SalePrice~.,data = one_hot_encoded_cc,method="forward")
+forward_subset<-regsubsets(SalePrice~.,data = train.onehot%>%select_if(function(col) sum(col,na.rm=T)>10)%>%select(-PoolQCNone),method="forward")
 forward<-names(one_hot_encoded_cc)[summary(forward_subset)$which[5,]]
 
-backward_subset <-regsubsets(SalePrice~.,data = one_hot_encoded_cc,method="backward")
+backward_subset <-regsubsets(SalePrice~.,data = train.onehot%>%select_if(function(col) sum(col,na.rm=T)>10)%>%select(-PoolQCNone),method="backward")
 backward<-names(one_hot_encoded_cc)[summary(backward_subset)$which[5,]]
 
 data.frame("Variable Importance Rank"=1:6,
-           "Forward Selected Variables" = names(one_hot_encoded_cc)[summary(forward_subset)$which[5,]], 
-           "Backward Selected Variables" = names(one_hot_encoded_cc)[summary(backward_subset)$which[5,]])
+           "Forward Selected Variables" = names(train.onehot%>%select_if(function(col) sum(col,na.rm=T)>10)%>%select(-PoolQCNone))[summary(forward_subset)$which[5,]], 
+           "Backward Selected Variables" = names(train.onehot%>%select_if(function(col) sum(col,na.rm=T)>10)%>%select(-PoolQCNone))[summary(backward_subset)$which[5,]])
 ```
 
 <<<<<<< HEAD
@@ -564,18 +568,12 @@ plot(hclust.fit) # display dendogram
 hclust.groups <- cutree(hclust.fit, k = 5)
 h_clust_data <- one_hot_encoded_cc %>% mutate(h_clust = hclust.groups)
 h_clust_data$h_clust <- factor(h_clust_data$h_clust)
-ggplot(h_clust_data,aes(h_clust,one_hot_encoded_cc$SalePrice,col=h_clust))+
-  geom_boxplot()+
-  theme_few()
 
-ggplot(h_clust_data, aes(h_clust,OverallQual))+
+ggplot(h_clust_data, aes(h_clust,SalePrice))+
   geom_boxplot()+
   theme_few()
 
 ggplot(h_clust_data, aes(GrLivArea,SalePrice, col=h_clust))+
-  geom_point()+
-  theme_few()
-ggplot(h_clust_data, aes(OverallQual,SalePrice,col=h_clust))+
   geom_point()+
   theme_few()
 
