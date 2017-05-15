@@ -459,19 +459,23 @@ ggplot()+
 
 ```
 
+Forward and backward subset selection was also used to shed some insight on our first research question. Both forward and backward selection selected the house id, overall condition, and garage area as the top 1st, 2nd, and 5th of the top five predictive variables. 	Where they differ is that the forward subset selection seems to select variables concerning the basement of the house, while the backward subset selection seems to select variables relating to the square feet of the house and also the kitchen quality.
+
+These selected variables should be taken with a grain of salt because the same non-sparse variable selection process was used as with the linear models, but forward and backward subset selection identify variables that weren't identified as important by any other method. Because there are so many variables, it is too computationally intensive to calculate the best subset selection, but it is likely that forward and backward subset selection with this many variables is identifying a non-optimal solution.
+
 ```{r subset_selection}
 
 fullTrain %>% group_by(RoofMatl) %>% summarize(n_houses = n(), avg_sale_price = mean(SalePrice), med_sale_price = median(SalePrice))
 
-forward_subset<-regsubsets(SalePrice~.,data = one_hot_encoded_cc,method="forward")
+forward_subset<-regsubsets(SalePrice~.,data = train.onehot%>%select_if(function(col) sum(col,na.rm=T)>10)%>%select(-PoolQCNone),method="forward")
 forward<-names(one_hot_encoded_cc)[summary(forward_subset)$which[5,]]
 
-backward_subset <-regsubsets(SalePrice~.,data = one_hot_encoded_cc,method="backward")
+backward_subset <-regsubsets(SalePrice~.,data = train.onehot%>%select_if(function(col) sum(col,na.rm=T)>10)%>%select(-PoolQCNone),method="backward")
 backward<-names(one_hot_encoded_cc)[summary(backward_subset)$which[5,]]
 
 data.frame("Variable Importance Rank"=1:6,
-           "Forward Selected Variables" = names(one_hot_encoded_cc)[summary(forward_subset)$which[5,]], 
-           "Backward Selected Variables" = names(one_hot_encoded_cc)[summary(backward_subset)$which[5,]])
+           "Forward Selected Variables" = names(train.onehot%>%select_if(function(col) sum(col,na.rm=T)>10)%>%select(-PoolQCNone))[summary(forward_subset)$which[5,]], 
+           "Backward Selected Variables" = names(train.onehot%>%select_if(function(col) sum(col,na.rm=T)>10)%>%select(-PoolQCNone))[summary(backward_subset)$which[5,]])
 ```
 
 Below we applied the KNN regression on the SalePrice; we assumed 3 values of k which are 3,5,19 and 50. Among the 4 values,3 had the least root mean square error(RMSE). We went ahead and drew a qplot to illustrate the pattern of k from 1 to 50 and its corresponding RMSE. According to the graph, 6 is the value of k with the least RMSE hence the most accurate in comparison to the others.
