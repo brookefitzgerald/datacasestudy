@@ -534,67 +534,9 @@ for (i in 1:50){
 qplot(1:50,RMSES)+theme_few()+labs(title = paste("Minimum RMSE at: ",which.min(RMSES)),x="k",y="RMSE")
 ```
 
-We applied hierarchical clustering in order to classify our data into 5 clusters. This was to answer our second research questions "Are there intrinsic groupings/clusters of houses present in the data and what do these clusters represent?
 
-"we classified the clusters in 5 groups. The 5 groups represent a range of sale prices in which the dataset fall. The 4th group being the most expensive costing within the range between 300000(3e+05) to 400000(4e+05) with outliers that go beyond 600000(6e+05) while the cheapest group  is the 5th group ranging from 100000(1e+05) but less than 200000(2e+05). Moreover we checked the overall quality compared to the price and the 4th group having the highest quality ranging within 7 up to 10 while the 5th group had the lowest quality ranging within 2 up to 6 with a few outliers which have 7.
-
-Moreover, we checked as well the relationship between GrLivArea(Above grade (ground) living area square feet) and the sales price , we found that the 4th group's Gridliv area ranged between 1500 to 3500 with some outliers reaching to 4000 while the 5th group ranged between 500 to 2500. Interestingly,the second group's Gridliv area ranges between 1000 till almost 2000 however there are outliers that go beyond 5000.
-```{r}
-par(mar=rep(1, 4))
-d <- dist(one_hot_encoded_cc, method = "euclidean") # distance matrix
-hclust.fit <- hclust(d, method = "ward.D")
-plot(hclust.fit) # display dendogram
-hclust.groups <- cutree(hclust.fit, k = 5)
-h_clust_data <- one_hot_encoded_cc %>% mutate(h_clust = hclust.groups)
-h_clust_data$h_clust <- factor(h_clust_data$h_clust)
-
-ggplot(h_clust_data, aes(h_clust,SalePrice))+
-  geom_boxplot()+
-  theme_few()
-
-ggplot(h_clust_data, aes(GrLivArea,SalePrice, col=h_clust))+
-  geom_point()+
-  theme_few()
-
-```
 
 #Random Forests
-
-
-
-#first we define multiplot function which will be used afterwards
-```{r}
-multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-  library(grid)
-  plots <- c(list(...), plotlist)
-  numPlots = length(plots)
-  if (is.null(layout)) {
-    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                     ncol = cols, nrow = ceiling(numPlots/cols))
-  }
-  if (numPlots==1) {
-    print(plots[[1]])
-  } else {
-    grid.newpage()
-    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-    for (i in 1:numPlots) {
-      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                      layout.pos.col = matchidx$col))
-    }
-  }
-}
-
-```    
-
-#i still need to change it for the actual data
-```{r}
-
-
-
-
-```
-
 
 ```{r}
 #5-fold cross validation
@@ -602,11 +544,11 @@ set.seed(100)
 fullTrain<-fullTrain[complete.cases(fullTrain),]
 
 folds = createFolds(fullTrain$SalePrice,k = 5)
-train1 = fullTrain[-folds[[1]],1:80]
-train2 = fullTrain[-folds[[2]],1:80]
-train3 = fullTrain[-folds[[3]],1:80]
-train4 = fullTrain[-folds[[4]],1:80]
-train5 = fullTrain[-folds[[5]],1:80]
+train1 = fullTrain[-folds[[1]],]
+train2 = fullTrain[-folds[[2]],]
+train3 = fullTrain[-folds[[3]],]
+train4 = fullTrain[-folds[[4]],]
+train5 = fullTrain[-folds[[5]],]
 
 #cross validation "test" set (including the target value "SalePrice")
 cvTest1 = fullTrain[folds[[1]],]
@@ -712,8 +654,29 @@ Then we started looking into answering our second research question: Are there n
 
 # Gloria's answers to research question 2 hierarchical clustering
 
-# Sergi's answers to research question 2 knn 
+We applied hierarchical clustering in order to classify our data into 5 clusters. This was to answer our second research questions "Are there intrinsic groupings/clusters of houses present in the data and what do these clusters represent?
 
+"we classified the clusters in 5 groups. The 5 groups represent a range of sale prices in which the dataset fall. The 4th group being the most expensive costing within the range between 300000(3e+05) to 400000(4e+05) with outliers that go beyond 600000(6e+05) while the cheapest group  is the 5th group ranging from 100000(1e+05) but less than 200000(2e+05). Moreover we checked the overall quality compared to the price and the 4th group having the highest quality ranging within 7 up to 10 while the 5th group had the lowest quality ranging within 2 up to 6 with a few outliers which have 7.
+
+Moreover, we checked as well the relationship between GrLivArea(Above grade (ground) living area square feet) and the sales price , we found that the 4th group's Gridliv area ranged between 1500 to 3500 with some outliers reaching to 4000 while the 5th group ranged between 500 to 2500. Interestingly,the second group's Gridliv area ranges between 1000 till almost 2000 however there are outliers that go beyond 5000.
+```{r}
+par(mar=rep(1, 4))
+d <- dist(one_hot_encoded_cc, method = "euclidean") # distance matrix
+hclust.fit <- hclust(d, method = "ward.D")
+plot(hclust.fit) # display dendogram
+hclust.groups <- cutree(hclust.fit, k = 5)
+h_clust_data <- one_hot_encoded_cc %>% mutate(h_clust = hclust.groups)
+h_clust_data$h_clust <- factor(h_clust_data$h_clust)
+
+ggplot(h_clust_data, aes(h_clust,SalePrice))+
+  geom_boxplot()+
+  theme_few()
+
+ggplot(h_clust_data, aes(GrLivArea,SalePrice, col=h_clust))+
+  geom_point()+
+  theme_few()
+
+```
 
 Our first approach to answering this question was to do some dimensionality reduction to see if there were any obvious structures in the data.
 
