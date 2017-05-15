@@ -668,6 +668,7 @@ multiplot(tp1,tp2,tp3,tp4,tp5,cols = 2)
 ```
 
 ```{r}
+
 #Calculate residuals
 Res1 = cvTest1$SalePrice - Pred1
 Res2 = cvTest2$SalePrice - Pred2
@@ -677,7 +678,7 @@ Res5 = cvTest5$SalePrice - Pred5
 
 
 #Calculate RMSE
-rmse1 = rmse(cvTest1$SalePrice,Pred1)
+rmse1 = sqrt(sum((cvTest1$SalePrice - Pred1)^2))/length(Pred1)
 rmse2 = rmse(cvTest2$SalePrice,Pred2)
 rmse3 = rmse(cvTest3$SalePrice,Pred3)
 rmse4 = rmse(cvTest4$SalePrice,Pred4)
