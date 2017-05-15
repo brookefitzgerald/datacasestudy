@@ -644,18 +644,6 @@ Pred3 = predict(modelRF3, cvTest3)
 Pred4 = predict(modelRF4, cvTest4)
 Pred5 = predict(modelRF5, cvTest5)
 
-#Plot target vs. predicted for the 5 models
-tp1 = ggplot(data = as.data.frame(cbind("Target" = cvTest1$SalePrice,"Predicted" = Pred1)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
-tp2 = ggplot(data = as.data.frame(cbind("Target" = cvTest2$SalePrice,"Predicted" = Pred2)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
-tp3 = ggplot(data = as.data.frame(cbind("Target" = cvTest3$SalePrice,"Predicted" = Pred3)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
-tp4 = ggplot(data = as.data.frame(cbind("Target" = cvTest4$SalePrice,"Predicted" = Pred4)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
-tp5 = ggplot(data = as.data.frame(cbind("Target" = cvTest5$SalePrice,"Predicted" = Pred5)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle("Target vs. Predicted")
-multiplot(tp1,tp2,tp3,tp4,tp5,cols = 2)
-
-```
-
-```{r}
-
 #Calculate residuals
 Res1 = cvTest1$SalePrice - Pred1
 Res2 = cvTest2$SalePrice - Pred2
@@ -664,22 +652,27 @@ Res4 = cvTest4$SalePrice - Pred4
 Res5 = cvTest5$SalePrice - Pred5
 
 #Calculate RMSE
-rmse1 = sqrt(sum((Res1)^2))/length(Pred1)
-rmse2 = sqrt(sum((Res2)^2))/length(Pred2)
-rmse3 = sqrt(sum((Res3)^2))/length(Pred3)
-rmse4 = sqrt(sum((Res4)^2))/length(Pred4)
-rmse5 = sqrt(sum((Res5)^2))/length(Pred5)
+rmse1 = round(sqrt(sum((Res1)^2))/length(Pred1),2)
+rmse2 = round(sqrt(sum((Res2)^2))/length(Pred2),2)
+rmse3 = round(sqrt(sum((Res3)^2))/length(Pred3),2)
+rmse4 = round(sqrt(sum((Res4)^2))/length(Pred4),2)
+rmse5 = round(sqrt(sum((Res5)^2))/length(Pred5),2)
 cbind(rmse1,rmse2,rmse3,rmse4,rmse5)
 
+
 #Plot target vs. predicted for the 5 models
-tp1 = ggplot(data = as.data.frame(cbind("Target" = cvTest1$SalePrice,"Predicted" = Pred1)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle(paste("RMSE: ",rmse1))
-tp2 = ggplot(data = as.data.frame(cbind("Target" = cvTest2$SalePrice,"Predicted" = Pred2)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle(paste("RMSE: "),rmse2)
-tp3 = ggplot(data = as.data.frame(cbind("Target" = cvTest3$SalePrice,"Predicted" = Pred3)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle(paste("RMSE: ",rmse3))
-tp4 = ggplot(data = as.data.frame(cbind("Target" = cvTest4$SalePrice,"Predicted" = Pred4)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle(paste("RMSE: ", rmse4))
-tp5 = ggplot(data = as.data.frame(cbind("Target" = cvTest5$SalePrice,"Predicted" = Pred5)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + ggtitle(paste("RMSE: ",rmse5))
+tp1 = ggplot(data = as.data.frame(cbind("Target" = cvTest1$SalePrice,"Predicted" = Pred1)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title= paste("RMSE: ",rmse1))
+tp2 = ggplot(data = as.data.frame(cbind("Target" = cvTest2$SalePrice,"Predicted" = Pred2)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title= paste("RMSE: ",rmse2))
+tp3 = ggplot(data = as.data.frame(cbind("Target" = cvTest3$SalePrice,"Predicted" = Pred3)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title= paste("RMSE: ",rmse3))
+tp4 = ggplot(data = as.data.frame(cbind("Target" = cvTest4$SalePrice,"Predicted" = Pred4)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title=paste("RMSE: ", rmse4))
+tp5 = ggplot(data = as.data.frame(cbind("Target" = cvTest5$SalePrice,"Predicted" = Pred5)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title=paste("RMSE: ",rmse5))
 grid.arrange(tp1,tp2,tp3,tp4,tp5,ncol = 2)
 
+
+
 ```
+
+
 
 ```{r}
 
