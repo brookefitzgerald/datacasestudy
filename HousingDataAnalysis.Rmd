@@ -642,7 +642,7 @@ rownames(Imp5) = c(1:nrow(Imp5))
 colnames(Imp5)[2] = "Importance"
 #ImpOrd5 = Imp5[order(Imp5$Importance, decreasing = TRUE),]
 
-importance=data.frame(Predictor =ImpOrd1[,1],RForest1=ImpOrd1[,2],RForest2=ImpOrd2[,2],RForest3=ImpOrd3[,2],RForest4=ImpOrd4[,2],RForest5=ImpOrd5[,2])
+importance=data.frame(Predictor =Imp1[,1],RForest1=Imp1[,2],RForest2=Imp2[,2],RForest3=Imp3[,2],RForest4=Imp4[,2],RForest5=Imp5[,2])
 
 dfm<-reshape2::melt(importance,id ="Predictor")
 min_val<-quantile(dfm$value)[4]
@@ -650,7 +650,8 @@ dfm%>% filter(value>min_val)%>%mutate(value=value/min_val/5)%>%
   ggplot(aes(reorder(Predictor,value),value,fill=variable))+
   geom_bar(stat="identity")+
   coord_flip()+
-  theme_few()
+  theme_few()+
+  labs(x = "Relative Variable Importance", y = "Variable Name")
 
 
 ```
@@ -848,8 +849,19 @@ ggplot(cols_w_tsne, aes(x=tsne1,y=tsne2,col=factor(pud)))+
        geom_point()+
        theme_few()
 ```
-## Conclusions for Research Question 2:
 
-From our analysis of reducing the dimensionality reduction of our data, it seems as though there are two main groupings within our data. The first is the price of the home. The sale price of a home is highly correlated with many other variables in the dataset and knowing the sale price can give you a good idea about other details of the home. The second main grouping is the amount of lot area/PUD status of a home. This grouping likely is a proxy for measuring how suburban a home is, because suburban homes are often PUDs that often have much more land then their city counterparts.
+# Overall Conclusion:
+
+Overall, the answers to our research questions were interesting and diverse. 
+
+## Research Question 1:
+
+For the first research question, there are many factors that are important to predicting the sales price, but it seems like the most important (in no particular order) are the overall house quality, above grade living area square feet, neighborhood, external quality, size of garage in car capacity, and kitchen quality. These variables were determined to be important by many of the predictive algorithms we examined as well as by the exploratory data analysis and correlation analysis at the beginning of the project. 
+
+## Research Question 2:
+
+From our analysis of reducing the dimensionality reduction of our data, it seems as though there are two main groupings within our data. The first is the sale price of the home. The sale price of a home is highly correlated with many other variables in the dataset and knowing the sale price can give you a good idea about other details of the home. Our analysis of hierarchical clustering isolated five clusters that map almost exactly to subsets of the sale price. The second main grouping is the amount of lot area/PUD status of a home. This grouping likely is a proxy for measuring how suburban a home is, because suburban homes are often PUDs that often have much more land then their city counterparts.
 
 The price and suburban-ness of a home make sense as good metrics for explaining the variation between homes because an expensive loft in the city is quite different than an expensive suburban home, as is an inexpensive suburban home from a inexpensive urban home. 
+
+In short, our two research questions uncovered some interesting results from our data and we hope to post our findings on Kaggle in order to get feedback from and share our findings with the wider data science community. 
