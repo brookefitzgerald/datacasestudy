@@ -554,24 +554,16 @@ plot(hclust.fit) # display dendogram
 hclust.groups <- cutree(hclust.fit, k = 5)
 h_clust_data <- one_hot_encoded_cc %>% mutate(h_clust = hclust.groups)
 h_clust_data$h_clust <- factor(h_clust_data$h_clust)
-ggplot(h_clust_data,aes(h_clust,one_hot_encoded_cc$SalePrice,col=h_clust))+
-  geom_boxplot()+
-  theme_few()
 
-ggplot(h_clust_data, aes(h_clust,OverallQual))+
+ggplot(h_clust_data, aes(h_clust,SalePrice))+
   geom_boxplot()+
   theme_few()
 
 ggplot(h_clust_data, aes(GrLivArea,SalePrice, col=h_clust))+
   geom_point()+
   theme_few()
-ggplot(h_clust_data, aes(OverallQual,SalePrice,col=h_clust))+
-  geom_point()+
-  theme_few()
 
 ```
-References
-Peter Buhlmann & Bin Yu,2002,Analyzing Bagging
 
 #Random Forests
 
