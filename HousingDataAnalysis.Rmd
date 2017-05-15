@@ -474,22 +474,7 @@ data.frame("Variable Importance Rank"=1:6,
            "Backward Selected Variables" = names(one_hot_encoded_cc)[summary(backward_subset)$which[5,]])
 ```
 
-Below we applied the Bagging regression of Salesprice: nbagg =25(bootstrap replications i.e samples to replicate.)Bagging regression also known as  (bootstrap aggregating) was introduced by Breiman (1 996a) to reduce the variance of a predictor( Buhlmann & Yu,2002) In our case applying the Bagging regression on the predictor sale price will reduce its variance and improve its mean squared error. after applying the bagging regression, the Out-of-bag estimate of root mean squared error is 36260.96, the mean is 180827and there have been 25 samples which were replicated
-
-# bagging regressionof Salesprice: nbagg =25(bbotstrap replications)
-
-```{r}
-fullTrain.bagging<-bagging(SalePrice~.,data=fullTrain,coob=TRUE,na.action = na.omit)
-print(fullTrain.bagging)
-summary(fullTrain.bagging)
-fullTrain_SalePrice <- predict(fullTrain.bagging, 
-                                         fullTrain)
-summary(fullTrain_SalePrice)
-
-
-```
-
-
+Below we applied the KNN regression on the SalePrice; we assumed 3 values of k which are 3,5,19 and 50. Among the 4 values,3 had the least root mean square error(RMSE). We went ahead and drew a qplot to illustrate the pattern of k from 1 to 50 and its corresponding RMSE. According to the graph, 6 is the value of k with the least RMSE hence the most accurate in comparison to the others.
 # KNN regression
 ```{r}
 fullTrain_knn3<-knnreg(train.onehot.cc[-306],train.onehot.cc$SalePrice, k=3);
@@ -517,8 +502,7 @@ knn.19.preds<-predict(fullTrain_knn19,test.onehot.cc[-306])
 knn.19.RMSE<-sqrt(sum((knn.19.preds-test.onehot.cc$SalePrice)^2))/length(test.onehot.cc)
 knn.19.RMSE
 
-summary(test.onehot.cc$SalePrice,predict(fullTrain_knn19,test.onehot.cc[-306]))
-sd(test.onehot.cc$SalePrice,predict(fullTrain_knn19,test.onehot.cc[-306]))
+
 plot(test.onehot.cc$SalePrice,predict(fullTrain_knn19,test.onehot.cc[-306]))
 
 #using k =50
