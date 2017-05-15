@@ -27,6 +27,7 @@ library(dummies)
 library(rpart)
 library(caret)
 library(gam)
+library(gbm)
 library(mice)
 library(ipred)
 library(kknn)
@@ -481,6 +482,7 @@ data.frame("Variable Importance Rank"=1:6,
 Below we applied the KNN regression on the SalePrice. The regression is basically fitting the best line to predict the SalePrice between neighbouring houses. we assumed 4 values of k which are 3,5,19 and 50. Among the 4 values,3 had the least root mean square error(RMSE). 
 
 We went ahead and drew a qplot to illustrate the pattern of k from 1 to 50 and its corresponding RMSE. According to the graph, 6 is the value of k with the least RMSE hence the most accurate in comparison to the others.Above 6,The RMSE gradually increase with the increasing value of k hence overfitting.
+
 # KNN regression
 ```{r}
 fullTrain_knn3<-knnreg(train.onehot.cc[-306],train.onehot.cc$SalePrice, k=3);
@@ -508,7 +510,8 @@ knn.19.preds<-predict(fullTrain_knn19,test.onehot.cc[-306])
 knn.19.RMSE<-sqrt(sum((knn.19.preds-test.onehot.cc$SalePrice)^2))/length(test.onehot.cc)
 knn.19.RMSE
 
-
+summary(test.onehot.cc$SalePrice,predict(fullTrain_knn19,test.onehot.cc[-306]))
+sd(test.onehot.cc$SalePrice,predict(fullTrain_knn19,test.onehot.cc[-306]))
 plot(test.onehot.cc$SalePrice,predict(fullTrain_knn19,test.onehot.cc[-306]))
 
 #using k =50
@@ -535,8 +538,8 @@ qplot(1:50,RMSES)+theme_few()+labs(title = paste("Minimum RMSE at: ",which.min(R
 ```
 
 
-
 #Random Forests
+
 
 ```{r}
 #5-fold cross validation
@@ -641,8 +644,10 @@ colnames(Imp5)[2] = "Importance"
 
 importance=data.frame(Predictor =ImpOrd1[,1],RForest1=ImpOrd1[,2],RForest2=ImpOrd2[,2],RForest3=ImpOrd3[,2],RForest4=ImpOrd4[,2],RForest5=ImpOrd5[,2])
 
-reshape2::melt(importance,id ="Predictor")%>% filter(value>47571101708)%>%
-  ggplot(aes(reorder(Predictor,-value),value,fill=variable))+
+dfm<-reshape2::melt(importance,id ="Predictor")
+min_val<-quantile(dfm$value)[4]
+dfm%>% filter(value>min_val)%>%mutate(value=value/min_val/5)%>%
+  ggplot(aes(reorder(Predictor,value),value,fill=variable))+
   geom_bar(stat="identity")+
   coord_flip()+
   theme_few()
@@ -650,13 +655,81 @@ reshape2::melt(importance,id ="Predictor")%>% filter(value>47571101708)%>%
 
 ```
 
+
+#Boosting 
+```{r}
+model.gbm <- gbm(SalePrice ~., data = train.full, distribution = "laplace",
+             shrinkage = 0.05,
+             interaction.depth = 5,
+             bag.fraction = 0.66,
+             n.minobsinnode = 1,
+             cv.folds = 100,
+             keep.data = F,
+             verbose = F,
+             n.trees = 300)
+predict.gbm <- predict(model.gbm, test.full, n.trees = 300)
+
+
+
+
+RMSE.gbm = round(sqrt(sum((predict-test.full$SalePrice)^2))/length(predict.gbm),2)  
+plot.gbm <- predict-test.full$SalePrice
+
+
+plot_gbm = ggplot(data = as.data.frame(cbind("Target" =test.full$SalePrice,"Predicted" = predict)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title= paste("RMSE: ",RMSE.gbm))
+
+plot_gbm
+```
+
+
+```{r}
+#feature importance
+Importance.gbm = as.data.frame(summary(model.gbm))
+Importance.gbm %>% filter(rel.inf>2) %>%
+ggplot(aes(reorder(var,rel.inf),rel.inf))+
+  geom_bar(stat="identity")+
+  coord_flip()+
+  theme_few()
+
+
+```
+
+
+
+```{r}
+data_plot <- data.frame("random forests" = plot2,
+                        "gradient BM" = plot.gbm)
+data_plot$Id <- row.names(data_plot)
+data_plot <- gather(data_plot, method, value, - Id)
+data_plot$method <- as.factor(data_plot$method)
+levels(data_plot$method) <- c(paste0("GBM (", RMSE.gbm, ")"), 
+                              paste0("Random Forests (", RMSE2, ")"))
+                          
+
+ggplot(data_plot, aes(x = Id, y = value, colour = method))+
+  geom_point(alpha = 0.7, size = 2)+
+  ggtitle("The difference between predict and real prices")+
+  labs(x = "Buyer Id", y = "The difference between prices", colour = " ")+
+  scale_x_discrete(breaks = c(0))+
+  theme(legend.position = "top",
+        legend.text = element_text(size = 12),
+        axis.text.x = element_blank(), 
+        axis.title.x = element_text(size = 14),
+        axis.text.y = element_text(size = 14), 
+        axis.title.y = element_text(size = 14),
+        title = element_text(size = 16))
+
+
+```
+
+
 Then we started looking into answering our second research question: Are there natural clusters of houses that can be derived and explained from within the data and what do those clusters correspond to? 
 
 # Gloria's answers to research question 2 hierarchical clustering
 
 We applied hierarchical clustering in order to classify our data into 5 clusters. This was to answer our second research questions "Are there intrinsic groupings/clusters of houses present in the data and what do these clusters represent?
 
-"we classified the clusters in 5 groups. The 5 groups represent a range of sale prices in which the dataset fall. The 4th group being the most expensive costing within the range between 300000(3e+05) to 400000(4e+05) with outliers that go beyond 600000(6e+05) while the cheapest group  is the 5th group ranging from 100000(1e+05) but less than 200000(2e+05). Moreover we checked the overall quality compared to the price and the 4th group having the highest quality ranging within 7 up to 10 while the 5th group had the lowest quality ranging within 2 up to 6 with a few outliers which have 7.
+We classified the clusters in 5 groups. The 5 groups represent a range of sale prices in which the dataset fall. The 4th group being the most expensive costing within the range between 300000(3e+05) to 400000(4e+05) with outliers that go beyond 600000(6e+05) while the cheapest group  is the 5th group ranging from 100000(1e+05) but less than 200000(2e+05). Moreover we checked the overall quality compared to the price and the 4th group having the highest quality ranging within 7 up to 10 while the 5th group had the lowest quality ranging within 2 up to 6 with a few outliers which have 7.
 
 Moreover, we checked as well the relationship between GrLivArea(Above grade (ground) living area square feet) and the sales price , we found that the 4th group's Gridliv area ranged between 1500 to 3500 with some outliers reaching to 4000 while the 5th group ranged between 500 to 2500. Interestingly,the second group's Gridliv area ranges between 1000 till almost 2000 however there are outliers that go beyond 5000.
 ```{r}
