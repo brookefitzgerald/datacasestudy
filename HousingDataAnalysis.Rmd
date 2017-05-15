@@ -534,6 +534,14 @@ p3<-qplot(test.onehot.cc$SalePrice,knn.19.preds)+theme_few()+geom_abline(slope =
 p4<-qplot(test.onehot.cc$SalePrice,knn.50.preds)+theme_few()+geom_abline(slope = 1, intercept = 0) + labs(x="Actual Sale Price",y="Predictions, k=50",title=paste("RMSE: ",knn.50.RMSE))
 grid.arrange(p1,p2,p3,p4,ncol=2)
 
+RMSES <- numeric(50)
+for (i in 1:50){
+  knn.model<-knnreg(train.onehot.cc[-306],train.onehot.cc$SalePrice, k=i);
+  knn.preds <-predict(knn.model,test.onehot.cc[-306])
+  knn.preds<-predict(knn.model,test.onehot.cc[-306])
+  RMSES[i]<-sqrt(sum((knn.preds-test.onehot.cc$SalePrice)^2))/length(test.onehot.cc)
+}
+qplot(1:50,RMSES)+theme_few()+labs(title = paste("Minimum RMSE at: ",which.min(RMSES)),x="k",y="RMSE")
 ```
 
 We applied hierarchical clustering in order to classify our data into 5 clusters. This was to answer our second research questions "Are there intrinsic groupings/clusters of houses present in the data and what do these clusters represent?
