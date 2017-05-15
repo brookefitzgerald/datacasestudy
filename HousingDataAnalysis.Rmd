@@ -27,6 +27,7 @@ library(dummies)
 library(rpart)
 library(caret)
 library(gam)
+library(gbm)
 library(mice)
 library(ipred)
 library(kknn)
@@ -474,7 +475,22 @@ data.frame("Variable Importance Rank"=1:6,
            "Backward Selected Variables" = names(one_hot_encoded_cc)[summary(backward_subset)$which[5,]])
 ```
 
-Below we applied the KNN regression on the SalePrice; we assumed 3 values of k which are 3,5,19 and 50. Among the 4 values,3 had the least root mean square error(RMSE). We went ahead and drew a qplot to illustrate the pattern of k from 1 to 50 and its corresponding RMSE. According to the graph, 6 is the value of k with the least RMSE hence the most accurate in comparison to the others.
+Below we applied the Bagging regression of Salesprice: nbagg =25(bootstrap replications i.e samples to replicate.)Bagging regression also known as  (bootstrap aggregating) was introduced by Breiman (1 996a) to reduce the variance of a predictor( Buhlmann & Yu,2002) In our case applying the Bagging regression on the predictor sale price will reduce its variance and improve its mean squared error. after applying the bagging regression, the Out-of-bag estimate of root mean squared error is 36260.96, the mean is 180827and there have been 25 samples which were replicated
+
+# bagging regressionof Salesprice: nbagg =25(bbotstrap replications)
+
+```{r}
+fullTrain.bagging<-bagging(SalePrice~.,data=fullTrain,coob=TRUE,na.action = na.omit)
+print(fullTrain.bagging)
+summary(fullTrain.bagging)
+fullTrain_SalePrice <- predict(fullTrain.bagging, 
+                                         fullTrain)
+summary(fullTrain_SalePrice)
+
+
+```
+
+
 # KNN regression
 ```{r}
 fullTrain_knn3<-knnreg(train.onehot.cc[-306],train.onehot.cc$SalePrice, k=3);
@@ -502,7 +518,8 @@ knn.19.preds<-predict(fullTrain_knn19,test.onehot.cc[-306])
 knn.19.RMSE<-sqrt(sum((knn.19.preds-test.onehot.cc$SalePrice)^2))/length(test.onehot.cc)
 knn.19.RMSE
 
-
+summary(test.onehot.cc$SalePrice,predict(fullTrain_knn19,test.onehot.cc[-306]))
+sd(test.onehot.cc$SalePrice,predict(fullTrain_knn19,test.onehot.cc[-306]))
 plot(test.onehot.cc$SalePrice,predict(fullTrain_knn19,test.onehot.cc[-306]))
 
 #using k =50
@@ -554,43 +571,11 @@ ggplot(h_clust_data, aes(OverallQual,SalePrice,col=h_clust))+
   theme_few()
 
 ```
+References
+Peter Buhlmann & Bin Yu,2002,Analyzing Bagging
+
 
 #Random Forests
-
-
-
-#first we define multiplot function which will be used afterwards
-```{r}
-multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-  library(grid)
-  plots <- c(list(...), plotlist)
-  numPlots = length(plots)
-  if (is.null(layout)) {
-    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                     ncol = cols, nrow = ceiling(numPlots/cols))
-  }
-  if (numPlots==1) {
-    print(plots[[1]])
-  } else {
-    grid.newpage()
-    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-    for (i in 1:numPlots) {
-      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                      layout.pos.col = matchidx$col))
-    }
-  }
-}
-
-```    
-
-#i still need to change it for the actual data
-```{r}
-
-
-
-
-```
 
 
 ```{r}
@@ -696,14 +681,84 @@ colnames(Imp5)[2] = "Importance"
 
 importance=data.frame(Predictor =ImpOrd1[,1],RForest1=ImpOrd1[,2],RForest2=ImpOrd2[,2],RForest3=ImpOrd3[,2],RForest4=ImpOrd4[,2],RForest5=ImpOrd5[,2])
 
-reshape2::melt(importance,id ="Predictor")%>% filter(value>47571101708)%>%
-  ggplot(aes(reorder(Predictor,-value),value,fill=variable))+
+dfm<-reshape2::melt(importance,id ="Predictor")
+min_val<-quantile(dfm$value)[4]
+dfm%>% filter(value>min_val)%>%mutate(value=value/min_val/5)%>%
+  ggplot(aes(reorder(Predictor,value),value,fill=variable))+
   geom_bar(stat="identity")+
   coord_flip()+
   theme_few()
 
 
 ```
+
+
+#Boosting 
+```{r}
+model.gbm <- gbm(SalePrice ~., data = train.full, distribution = "laplace",
+             shrinkage = 0.05,
+             interaction.depth = 5,
+             bag.fraction = 0.66,
+             n.minobsinnode = 1,
+             cv.folds = 100,
+             keep.data = F,
+             verbose = F,
+             n.trees = 300)
+predict.gbm <- predict(model.gbm, test.full, n.trees = 300)
+
+
+
+
+RMSE.gbm = round(sqrt(sum((predict-test.full$SalePrice)^2))/length(predict.gbm),2)  
+plot.gbm <- predict-test.full$SalePrice
+
+
+plot_gbm = ggplot(data = as.data.frame(cbind("Target" =test.full$SalePrice,"Predicted" = predict)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title= paste("RMSE: ",RMSE.gbm))
+
+plot_gbm
+```
+
+
+```{r}
+#feature importance
+Importance.gbm = as.data.frame(summary(model.gbm))
+Importance.gbm %>% filter(rel.inf>2) %>%
+ggplot(aes(reorder(var,rel.inf),rel.inf))+
+  geom_bar(stat="identity")+
+  coord_flip()+
+  theme_few()
+
+
+```
+
+
+
+```{r}
+data_plot <- data.frame("random forests" = plot2,
+                        "gradient BM" = plot.gbm)
+data_plot$Id <- row.names(data_plot)
+data_plot <- gather(data_plot, method, value, - Id)
+data_plot$method <- as.factor(data_plot$method)
+levels(data_plot$method) <- c(paste0("GBM (", RMSE.gbm, ")"), 
+                              paste0("Random Forests (", RMSE2, ")"))
+                          
+
+ggplot(data_plot, aes(x = Id, y = value, colour = method))+
+  geom_point(alpha = 0.7, size = 2)+
+  ggtitle("The difference between predict and real prices")+
+  labs(x = "Buyer Id", y = "The difference between prices", colour = " ")+
+  scale_x_discrete(breaks = c(0))+
+  theme(legend.position = "top",
+        legend.text = element_text(size = 12),
+        axis.text.x = element_blank(), 
+        axis.title.x = element_text(size = 14),
+        axis.text.y = element_text(size = 14), 
+        axis.title.y = element_text(size = 14),
+        title = element_text(size = 16))
+
+
+```
+
 
 Then we started looking into answering our second research question: Are there natural clusters of houses that can be derived and explained from within the data and what do those clusters correspond to? 
 
