@@ -536,6 +536,9 @@ qplot(1:50,RMSES)+theme_few()+labs(title = paste("Minimum RMSE at: ",which.min(R
 ```
 
 #Random Forests
+The next method we tried to tackle is the Random Forests, which is an ensemble method based on decision trees. As we have seen, decision trees can be understood easier but they do not predict with the same accuracy as other models. Generally, decision trees have high variance, which might lead to a very different tree for a small change in the training data. Therefore, the random forest allow us to counteract this problem. 
+
+In our random forest model, we used 5-fold cross validation to determine how the predictive accuracy could be improved by varying the number of features randomly selected at each node. The data was divided into a training set and test set in order to compare the predicted values with the true values. The figure below shows the target values versus the predicted values. As we can observe, the model is not perfect since all points do not lie along the diagonal line. Indeed, we can notice that the points found in the middle of the x-axis tend to be equally above and below the line. Nevertheless, the modelling for low sale prices or high sale prices was not as accurate. The model tends to overestimate sale prices that are low and underestimate high sale prices.
 
 
 ```{r}
@@ -599,7 +602,7 @@ grid.arrange(tp1,tp2,tp3,tp4,tp5,ncol = 2)
 
 ```
 
-
+Although random forests are not easily interpretable, they could provide us with the importance of each of the predictors. In our model, we have determined that overall quality was the most important predictor, followed by the house's neighborhood and the square feet of the above ground living area. Nonetheless, the overall quality was clearly the most important one.
 
 ```{r}
 
@@ -654,7 +657,11 @@ dfm%>% filter(value>min_val)%>%mutate(value=value/min_val/5)%>%
 ```
 
 
-#Boosting 
+#Gradient Boosting Model
+
+Due to the fact that in our random forest model we have overestimated low sale prices and underestimated high sale prices, we can address this bias by applying some boosting techniques (such as the Gradient Boosting Model).
+As we can observe in the figure below, the GBM model was more accurate in our prediction than the random forests model since it is reduced the bias when overestimating sale prices that are low. However, with this method we did not manage to reduce the bias since it stills underestimate sale prices that are high.
+
 ```{r}
 model.gbm <- gbm(SalePrice ~., data = train.full, distribution = "laplace",
              shrinkage = 0.05,
@@ -675,6 +682,7 @@ RMSE.gbm = round(sqrt(sum((predict.gbm-test.full$SalePrice)^2))/length(predict.g
 ggplot(data = as.data.frame(cbind("Target" =test.full$SalePrice,"Predicted" = predict.gbm)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title= paste("RMSE: ",RMSE.gbm))
 ```
 
+Finally, according to the GBM model, the house's neighborhood is the most important predictor, whereas the the square feet of the above ground living area is the second one, as we can observe in the following plot. 
 
 ```{r}
 #feature importance
@@ -688,6 +696,9 @@ ggplot(aes(reorder(var,rel.inf),rel.inf))+
 
 ```
 
+
+
+# SECOND RESEARCH QUESTION
 Then we started looking into answering our second research question: Are there natural clusters of houses that can be derived and explained from within the data and what do those clusters correspond to? 
 
 We applied hierarchical clustering in order to classify our data into 5 clusters. This contributes to a part of the answer to our research question "Are there intrinsic groupings/clusters of houses present in the data and what do these clusters represent? The clusters are formed basing on the fact that houses with similar features are within the same range of Sale Price.
