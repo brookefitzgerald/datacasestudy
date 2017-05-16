@@ -1,10 +1,10 @@
 ---
 title: "Housing Data Analysis"
 author: "Brooke Fitzgerald, Gloria Giramahoro, Sergi Drago"
-date: "4/2/2017"
+date: "16/05/2017"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 # Introduction
@@ -519,7 +519,7 @@ fullTrain_knn50<-knnreg(train.onehot.cc[-306],train.onehot.cc$SalePrice, k=50);
 knn.50.preds <-predict(fullTrain_knn50,test.onehot.cc[-306])
 knn.50.RMSE<-sqrt(sum((knn.50.preds-test.onehot.cc$SalePrice)^2))/length(test.onehot.cc)
 
-p1<-qplot(test.onehot.cc$SalePrice,knn.3.preds)+theme_few()+geom_abline(slope = 1, intercept = 0) + labs(x="Actual Sale Price",y="Predictions, k=3",title=paste("RMSE: ",knn.3.RMSE))
+p1<-qplot(test.onehot.cc$SalePrice,knn.1.preds)+theme_few()+geom_abline(slope = 1, intercept = 0) + labs(x="Actual Sale Price",y="Predictions, k=1",title=paste("RMSE: ",knn.1.RMSE))
 p2<-qplot(test.onehot.cc$SalePrice,knn.5.preds)+theme_few()+geom_abline(slope = 1, intercept = 0) + labs(x="Actual Sale Price",y="Predictions, k=5",title=paste("RMSE: ",knn.5.RMSE))
 p3<-qplot(test.onehot.cc$SalePrice,knn.19.preds)+theme_few()+geom_abline(slope = 1, intercept = 0) + labs(x="Actual Sale Price",y="Predictions, k=19",title=paste("RMSE: ",knn.19.RMSE))
 p4<-qplot(test.onehot.cc$SalePrice,knn.50.preds)+theme_few()+geom_abline(slope = 1, intercept = 0) + labs(x="Actual Sale Price",y="Predictions, k=50",title=paste("RMSE: ",knn.50.RMSE))
@@ -592,11 +592,11 @@ rmse4 = round(sqrt(sum((Res4)^2))/length(Pred4),2)
 rmse5 = round(sqrt(sum((Res5)^2))/length(Pred5),2)
 
 #Plot target vs. predicted for the 5 models
-tp1 = ggplot(data = as.data.frame(cbind("Sale Price" = cvTest1$SalePrice,"Predicted Sale Price" = Pred1)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title= paste("RMSE: ",rmse1))+theme_few()
-tp2 = ggplot(data = as.data.frame(cbind("Sale Price" = cvTest2$SalePrice,"Predicted Sale Prie" = Pred2)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title= paste("RMSE: ",rmse2))+theme_few()
-tp3 = ggplot(data = as.data.frame(cbind("Sale Price" = cvTest3$SalePrice,"Predicted Sale Price" = Pred3)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title= paste("RMSE: ",rmse3))+theme_few()
-tp4 = ggplot(data = as.data.frame(cbind("Sale Price" = cvTest4$SalePrice,"Predicted Sale Price" = Pred4)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title=paste("RMSE: ", rmse4))+theme_few()
-tp5 = ggplot(data = as.data.frame(cbind("Sale Price" = cvTest5$SalePrice,"Predicted Sale Price" = Pred5)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title=paste("RMSE: ",rmse5))+theme_few()
+tp1 = ggplot(data = as.data.frame(cbind("SalePrice" = cvTest1$SalePrice,"PredictedSalePrice" = Pred1)), aes(x = SalePrice, y = PredictedSalePrice)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title= paste("RMSE: ",rmse1))+theme_few()
+tp2 = ggplot(data = as.data.frame(cbind("SalePrice" = cvTest2$SalePrice,"PredictedSalePrice" = Pred2)), aes(x = SalePrice, y = PredictedSalePrice)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title= paste("RMSE: ",rmse2))+theme_few()
+tp3 = ggplot(data = as.data.frame(cbind("SalePrice" = cvTest3$SalePrice,"PredictedSalePrice" = Pred3)), aes(x = SalePrice, y = PredictedSalePrice)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title= paste("RMSE: ",rmse3))+theme_few()
+tp4 = ggplot(data = as.data.frame(cbind("SalePrice" = cvTest4$SalePrice,"PredictedSalePrice" = Pred4)), aes(x = SalePrice, y = PredictedSalePrice)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title=paste("RMSE: ", rmse4))+theme_few()
+tp5 = ggplot(data = as.data.frame(cbind("SalePrice" = cvTest5$SalePrice,"PredictedSalePrice" = Pred5)), aes(x = SalePrice, y = PredictedSalePrice)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title=paste("RMSE: ",rmse5))+theme_few()
 grid.arrange(tp1,tp2,tp3,tp4,tp5,ncol = 2)
 
 ```
@@ -671,7 +671,7 @@ predict.gbm <- predict(model.gbm, test.full, n.trees = 300)
 
 RMSE.gbm = round(sqrt(sum((predict.gbm-test.full$SalePrice)^2))/length(predict.gbm),2)  
 
-ggplot(data = as.data.frame(cbind("Sale Price" =test.full$SalePrice,"Predicted Sale Price" = predict.gbm)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title= paste("RMSE: ",RMSE.gbm))+theme_few()
+ggplot(data = as.data.frame(cbind("SalePrice" =test.full$SalePrice,"PredictedSalePrice" = predict.gbm)), aes(x = SalePrice, y = PredictedSalePrice)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title= paste("RMSE: ",RMSE.gbm))+theme_few()
 ```
 
 Finally, according to the GBM model, the house's neighborhood is the most important predictor, whereas the the square feet of the above ground living area is the second one, as we can observe in the following plot. 
@@ -717,13 +717,13 @@ ggplot(h_clust_data, aes(GrLivArea,SalePrice, col=h_clust))+
 
 ```
 
-Our first approach to answering this question was to do some dimensionality reduction to see if there were any obvious structures in the data.
+We then decided to do some dimensionality reduction to see if there were any obvious structures in the data.
 
 First, we computed PCA on the data with two different algorithms, then plotted them. 
 
 Sale price seems to almost exactly maps to the first principle component, and the second principle component is highly negatively correlated with LotArea. It is therefore obvious that much of the variation within this dataset is explained by these two variables. 
 
-Furthermore, MSSubClass (the type of dwelling involved in the sale) also has an interesting relationship with principal component 2. The MSSubClasses 120, 160, and 180 form a cluster in the higher values of the second principal component. MSSubClasses 120, 160, and 180 are the 3 types of dwellings that are planned unit developments - communities of homes that are operated by a homeowners association to provide amenities like parks, playgrounds, pools, tennis and basketball courts, hiking trails, private gated common land and street lights or the like.
+Furthermore, MSSubClass (the type of dwelling involved in the sale) also has an interesting relationship with principal component 2. The MSSubClasses 120, 160, and 180 form a cluster in the higher values of the second principal component. MSSubClasses 120, 160, and 180 are the 3 types of dwellings that are planned unit developments - communities of homes that are operated by a homeowners association to provide amenities like parks, playgrounds, pools, tennis and basketball courts, hiking trails, private gated common land and street lights or the like. It makes sense that these homes form a cluster, because homes in planned communities are often regulated to be extremely similar. 
 
 ```{r pca, message=F}
 numeric_columns_only <- fullTrain %>% select_if(is.numeric)
@@ -766,24 +766,24 @@ p2<-ggplot(fullTrain, aes(factor(MSSubClass), SalePrice))+
 grid.arrange(p1,p2,ncol=2)
 
 add_PUD <-function(MSSubClass){
-  pud <- numeric(length(MSSubClass))
+  PUD <- numeric(length(MSSubClass))
   for (i in 1:length(MSSubClass)){
     if (MSSubClass[i] %in% c(120, 160, 180)){
-      pud[i] <- 1
+      PUD[i] <- 1
     }
   }
-  return(pud)
+  return(PUD)
 }
-fullTrain <- fullTrain %>% mutate(pud = add_PUD(MSSubClass))
-fullTest <- fullTest %>% mutate(pud = add_PUD(MSSubClass))
+fullTrain <- fullTrain %>% mutate(PUD = add_PUD(MSSubClass))
+fullTest <- fullTest %>% mutate(PUD = add_PUD(MSSubClass))
 
-cols_w_prcmp <- cols_w_prcmp %>% mutate(pud = add_PUD(MSSubClass))
+cols_w_prcmp <- cols_w_prcmp %>% mutate(PUD = add_PUD(MSSubClass))
 
-p1<-ggplot(aes(pud, princomp2, col=LotArea), data=cols_w_prcmp)+
+p1<-ggplot(aes(PUD, princomp2, col=LotArea), data=cols_w_prcmp)+
        geom_jitter()+
        theme_few()+
        labs(x="PUD")
-p2<-ggplot(cols_w_prcmp, aes(x=princomp1, y=princomp2, col=factor(pud)))+
+p2<-ggplot(cols_w_prcmp, aes(x=princomp1, y=princomp2, col=factor(PUD)))+
        geom_point(shape=21,alpha = .9)+
        theme_few()
 grid.arrange(p1,p2)
@@ -791,7 +791,7 @@ grid.arrange(p1,p2)
 
 Then we decided to compare dimensionality reduction of a t-SNE plot, which stands for t-distributed Stochastic Neighbor Embedding. It is a dimensionality reduction algorithm that embeds high dimensional data into a 2 dimensional space. There is a nice [R vignette about the package](https://cran.r-project.org/web/packages/tsne/tsne.pdf), a [blog post](https://www.codeproject.com/Tips/788739/Visualization-of-High-Dimensional-Data-using-t-SNE) about its use in R, and an [interactive visualization](http://distill.pub/2016/misread-tsne/) characterizing its strengths and weaknesses.
 
-The t-SNE confirms many of the same things as the principal component analysis, namely that the majority of the variance in the dataset can be explained by the sale price (as well as variables that are correlated to the sale price like the overall quality). Also, when you plot variables that are uncorrelated with the SalePrice but correlated with the second principal component (like lot area and being a PUD) you see groupings on the outside of the main structure, and the occasional small cluster.
+The t-SNE confirms many of the same things as the principal component analysis, namely that the majority of the variance in the dataset can be explained by the sale price (as well as variables that are correlated to the sale price like the overall quality). Also, when you plot variables that are uncorrelated with the SalePrice but correlated with the second principal component (like lot area and being a PUD) you see groupings on the outside of the main structure, and the occasional small cluster. One cluster (seen in the t-SNE plot colored by lot area) seems to point to the similarilty of more rural houses that have much higher lot area. Coloring the t-SNE plot by the PUD houses also shows some clear clusters of houses likely in the same housing development.
 
 ```{r tsne}
 housing_tsne<-Rtsne(numeric_full_columns_only)
@@ -810,7 +810,7 @@ ggplot(cols_w_tsne, aes(x=tsne1,y=tsne2,col=log(LotArea)))+
        geom_point()+
        theme_few()
 
-ggplot(cols_w_tsne, aes(x=tsne1,y=tsne2,col=factor(pud)))+
+ggplot(cols_w_tsne, aes(x=tsne1,y=tsne2,col=factor(PUD)))+
        geom_point()+
        theme_few()
 ```
@@ -847,8 +847,8 @@ data.frame(Method = c("Average Decision Tree ",
 
 ## Research Question 2:
 
-From our analysis of reducing the dimensionality reduction of our data, it seems as though there are two main groupings within our data. The first is the sale price of the home. The sale price of a home is highly correlated with many other variables in the dataset and knowing the sale price can give you a good idea about other details of the home. Our analysis of hierarchical clustering isolated five clusters that map almost exactly to subsets of the sale price. The second main grouping is the amount of lot area/PUD status of a home. This grouping likely is a proxy for measuring how suburban a home is, because suburban homes are often PUDs that often have much more land then their city counterparts.
+From our analysis of reducing the dimensionality reduction of our data, it seems as though there are two main groupings within our data. The first is the sale price of the home. The sale price of a home is highly correlated with many other variables in the dataset and knowing the sale price can give you a good idea about other details of the home. Our analysis of hierarchical clustering isolated five clusters that map almost exactly to subsets of the sale price. The second main grouping is the amount of lot area/PUD status of a home. These groupings likely are a proxy for measuring how suburban/rural a home is, because suburban homes are often PUDs that have little individual lot area, but share land within the subdivision, and rural homes often have much more land then their city counterparts.
 
-The price and suburban-ness of a home make sense as good metrics for explaining the variation between homes because an expensive loft in the city is quite different than an expensive suburban home, as is an inexpensive suburban home from a inexpensive urban home. 
+The price and suburban-ness of a home make sense as good metrics for explaining the variation between homes because an expensive loft in the city is quite different than an expensive suburban or rural home, as is an inexpensive suburban/rural home from a inexpensive urban home. 
 
 In short, our two research questions uncovered some interesting results from our data and we hope to post our findings on Kaggle in order to get feedback from and share our findings with the wider data science community. 
