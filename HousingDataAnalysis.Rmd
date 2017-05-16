@@ -3,8 +3,8 @@ title: "Housing Data Analysis"
 author: "Brooke Fitzgerald, Gloria Giramahoro, Sergi Drago"
 date: "16/05/2017"
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 
 # Introduction
@@ -831,7 +831,7 @@ data.frame(Method = c("Average Decision Tree ",
                       "Non-Sparse Linear Model with One-Hot Encoded Data",
                       "KNN Regression",
                       "Average Random Forest",
-                      "Bagging"),
+                      "Boosting"),
            RMSE = c(tree.RMSE.avg,
                     lr.RMSE.onehot,
                     lr.RMSE.onehot.edit,
