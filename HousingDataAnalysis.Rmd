@@ -3,8 +3,8 @@ title: "Housing Data Analysis"
 author: "Brooke Fitzgerald, Gloria Giramahoro, Sergi Drago"
 date: "16/05/2017"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 # Introduction
@@ -180,7 +180,7 @@ ggplot(fullTrain, aes(SalePrice))+
        theme_few()
 ```
 
-A boxplot comparing the sale prices for all of the different neighborhoods shows that there are some neighborhoods that clearly have much higher average and median sale prices than others. This indicates that Neighborhood is likely an importat indicator for sale price.
+A boxplot comparing the sale prices for all of the different neighborhoods shows that there are some neighborhoods that clearly have much higher average and median sale prices than others. This indicates that Neighborhood is likely an important indicator for sale price.
 
 ```{r neighborhoods}
 ordered_names<-fullTrain %>% group_by(Neighborhood)%>%summarize(avg = mean('SalePrice')) %>% arrange(avg)
@@ -295,6 +295,7 @@ We did this by using the createDataPartition function from the caret package in 
 We created training and testing sets for the full data, the imputed data, the one hot encoded data, and the one hot encoded data with NA values removed.
 
 ```{r partition_data}
+set.seed(3750)
 indices<- createDataPartition(fullTrain$SalePrice,p=0.75)$Resample1
 train.full<- fullTrain[indices,]
 test.full<-fullTrain[-indices,]
@@ -317,13 +318,13 @@ We then decided to answer our second research question:  Which variables are mos
 
 To do this, we inspected the individual decision trees the algorithm constructed. Each algorithm constructed a decision tree that has 11 leaf nodes of sale price bins that are reached with either 3 or 4 splits. 
 
-From these, it becomes immediately obvious that the overall quality of a house is the most important factor to sale price, as it was used for all three trees for the first and second level splits. The third level splits are equally in agreement, for all three models use above grade living area square feet to split this level. After that, the trees are not as synonomous, though they do contain similar information about the important variables in prediction sale price.
+From these, it becomes immediately obvious that the overall quality of a house is the most important factor to sale price, as it was used for all three trees for the first split. After that, the trees are not as synonomous, though they do contain similar information about the important variables in predicting sale price.
 
-All three models use the size of garage in car capacity to determine the data with the 3rd and 4th lowest sale price nodes and the finished square feet of the basement type 1 to determine the 4th and 5th highest sale price nodes.
+All three models use the above grade living area square feet, total basement square feet, total rooms above ground, and basement quality to make further splits. The only variable not used by the one-hot encoded model is the neighborhood, although it is used as a splitting variable in level two of the full and imputed data. 
 
-Where the decision trees diverge is the variable used to split between the 2 lowest sale price nodes. For the full data and the imputed data the input data point is assigned to the lowest node if it is in any of the neighborhoods Briardale, Brookside, Edwards, Iowa DOT and Rail Road, Meadow Village, Old Town, or South & West of Iowa State University. However, for the one-hot encoded data the input data point is assigned to the lowest sale price node if the total basement square feet is less than $1008{\ }ft^2$.
+For the full data and the imputed data the input data point is assigned to the lowest three nodes if it is in any of the neighborhoods Briardale, Bluestem, Brookside, Edwards, Iowa DOT and Rail Road, Meadow Village, Mitchell, Old Town, Sawyer, or South & West of Iowa State University. However, for the one-hot encoded data the input data point is assigned to the lowest 3 sale price nodes if the above grade living area square feet is less than $1419{\ }ft^2$.
 
-When you look at the box plots comparing the two splits, the neighborhood split has a smaller interquartile range within sale price than the total basement square feet split. This may explain why the one-hot encoded decision tree has a slightly worse RMSE than the other two models. 
+When you look at the box plots comparing the two splits, the neighborhood split has a smaller interquartile range within sale price than the above grade living area square feet split. This may explain why the one-hot encoded decision tree has a slightly worse RMSE than the other two models. 
 
 ```{r decision_tree}
 tree.model.full <-rpart(SalePrice~.,train.full)
@@ -352,14 +353,14 @@ fancyRpartPlot(tree.model.imp)
 fancyRpartPlot(tree.model.onehot)
 
 
-lowest_vars<-fullTrain %>% mutate(LowestNeighborhoods = factor(ifelse(Neighborhood %in% c("BrDale","BrkSide","Edwards","IDOTRR","MeadowV","OldTown","SWISU"), 1, 0))) %>%
-  mutate(LowestTotalBsmtSF = factor(ifelse(TotalBsmtSF<1008,1,0))) %>%
-  select(LowestNeighborhoods,LowestTotalBsmtSF,SalePrice)
+lowest_vars<-fullTrain %>% mutate(NeighborhoodSplit = factor(ifelse(Neighborhood %in% c("Blueste","BrDale","BrkSide","Edwards","IDOTRR","MeadowV","Mitchel","OldTown","Sawyer","SWISU"), 1, 0))) %>%
+  mutate(GrLivAreaSplit = factor(ifelse(TotalBsmtSF<1419,1,0))) %>%
+  select(NeighborhoodSplit,GrLivAreaSplit,SalePrice)
 
-p1<-ggplot(lowest_vars, aes(LowestTotalBsmtSF,SalePrice))+
+p1<-ggplot(lowest_vars, aes(GrLivAreaSplit,SalePrice))+
   geom_boxplot()+
   theme_few()
-p2<-ggplot(lowest_vars, aes(LowestNeighborhoods,SalePrice))+
+p2<-ggplot(lowest_vars, aes(NeighborhoodSplit,SalePrice))+
   geom_boxplot()+
   theme_few()
 grid.arrange(p1,p2,ncol=2)
@@ -368,28 +369,21 @@ grid.arrange(p1,p2,ncol=2)
 
 The next method we used to attempt to answer our research question is linear regression. Due to some of the factor variables having extremely sparse categories (as discussed above) when the data was split into training and testing sets the testing set occasionally had factors that were missing from the training set. To overcome this, we manually added the factors that were missing, but this understandably caused some deficiencies in the model and its predictions.
 
-The linear models fit on the full dataset and the imputed dataset entirely failed to predict sale price, likely due to the lack of factor representation. However, the one-hot encoded data will always represent every factor category as a variable, even if that variable contains only zeros in the training split. The predictions from the one hot encoded data fit the data rather well with an adjusted $R^2$ of 0.9157 and RMSE of 1540.92.
+The linear models fit on the full dataset and the imputed dataset entirely failed to predict sale price, likely due to the lack of factor representation. However, the one-hot encoded data will always represent every factor category as a variable, even if that variable contains only zeros in the training split. The predictions from the one hot encoded data fit the data rather well adide from one outlier with an adjusted $R^2$ of 0.8874 and RMSE of 2983.531.
 
-However, when examining the statistically significant coefficients of the model in order to answer our research question, it becomes clear that interpreting the outputs of a model with such sparsely represented factors gives nonsensical results - e.g. that houses with a roof material of clay tile are worth \$600,000 less than those without clay roofs and that being adjacent to a near positive off-site feature--park, greenbelt, etc. makes your house worth almost \$200,000 less. 
+However, when examining the statistically significant coefficients of the model in order to answer our research question, it becomes clear that interpreting the outputs of a model with such sparsely represented factors gives nonsensical results - e.g. that houses with a good quality pool are worth \$4,000,000 less than those without.
 
-Therefore, we filtered the one-hot encoded data to only get the variables with more than 10 observations in the training set and trained a linear model on that. The RMSE is slightly higher than the previous model at 1540.92, and the adjusted $R^2$ is slightly lower at 0.8736, but the coefficients are much more interpretable. 
+Therefore, we filtered the one-hot encoded data to only get the variables with more than 15 observations in the training set and trained a linear model on that. The RMSE is much lower than the previous model at 1700.314, and the adjusted $R^2$ is slightly lower at 0.8874, and the coefficients are much more interpretable. 
 
-From this linear model, we can say that having a quick and significant rise from street grade to building has the most significant negative impact on the sale price of a house, while being from a nice neighborhood (Northridge, Northridge Heights, Stone Brook), having excellent kitchen quality, typical functionality, and a large number of full bathrooms and garage capacity in number in cars all have a large impact on sale price.  
+From this linear model, we can say that living in a less nice neighborhood (Mitchell, Northwest Ames,  Edwards) having a quick and significant rise from street grade to building has the most significant negative impact on the sale price of a house, while being from a nice neighborhood (Northridge, Northridge Heights, Stone Brook), having excellent kitchen quality, non-irregular lot shape, good quality walkout or garden level walls (BsmtExposureGd), and garage capacity in number in cars all have a large impact on sale price.  
 
 ```{r linear_model}
 lr.model.full <- lm(SalePrice~.,train.full, na.action = na.omit)
 lr.model.full$xlevels$RoofMatl <- union(lr.model.full$xlevels$RoofMatl, levels(test.full$RoofMatl))
 lr.model.full$xlevels$Exterior1st <- union(lr.model.full$xlevels$Exterior1st, levels(test.full$Exterior1st))
 lr.model.full$xlevels$Exterior2nd <- union(lr.model.full$xlevels$Exterior2nd, levels(test.full$Exterior2nd))
-lr.model.full$xlevels$Condition2 <- union(lr.model.full$xlevels$Condition2, levels(test.full$Condition2))
-lr.model.full$xlevels$ExterCond <- union(lr.model.full$xlevels$ExterCond, levels(test.full$ExterCond))
-lr.model.full$xlevels$Electrical <- union(lr.model.full$xlevels$Electrical, levels(test.full$Electrical))
-lr.model.full$xlevels$Neighborhood <- union(lr.model.full$xlevels$Neighborhood, levels(test.full$Neighborhood))
-lr.model.full$xlevels$RoofStyle <- union(lr.model.full$xlevels$RoofStyle, levels(test.full$RoofStyle))
-lr.model.full$xlevels$Functional <- union(lr.model.full$xlevels$Functional, levels(test.full$Functional))
-lr.model.full$xlevels$SaleType <- union(lr.model.full$xlevels$SaleType, levels(test.full$SaleType))
-lr.model.full$xlevels$HeatingQC <- union(lr.model.full$xlevels$HeatingQC, levels(test.full$HeatingQC))
 lr.model.full$xlevels$GarageQual <- union(lr.model.full$xlevels$GarageQual, levels(test.full$GarageQual))
+lr.model.full$xlevels$Heating <- union(lr.model.full$xlevels$Heating, levels(test.full$Heating))
 lr.model.full$xlevels$MiscFeature <- union(lr.model.full$xlevels$MiscFeature, levels(test.full$MiscFeature))
 lr.model.full$xlevels$GarageCond <- union(lr.model.full$xlevels$GarageCond, levels(test.full$GarageCond))
 lr.model.full$xlevels$PoolQC <- union(lr.model.full$xlevels$PoolQC, levels(test.full$PoolQC))
@@ -398,23 +392,18 @@ lr.RMSE.full <- sqrt(sum((lr.preds.full-test.full$SalePrice)^2,na.rm=TRUE))/leng
 p1<-qplot(lr.preds.full,test.full$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Full Linear Model Predictions",y="Full Sale Price",title=paste("RMSE: ",lr.RMSE.full))
 
 lr.model.imp <- lm(SalePrice~.,train.imp)
-lr.model.imp$xlevels$Condition2 <- union(lr.model.imp$xlevels$Condition2, levels(test.imp$Condition2))
+
 lr.model.imp$xlevels$Exterior1st <- union(lr.model.imp$xlevels$Exterior1st, levels(test.imp$Exterior1st))
 lr.model.imp$xlevels$Exterior2nd <- union(lr.model.imp$xlevels$Exterior2nd, levels(test.imp$Exterior2nd))
+lr.model.imp$xlevels$Heating <- union(lr.model.imp$xlevels$Heating, levels(test.imp$Heating))
 lr.model.imp$xlevels$RoofMatl <- union(lr.model.imp$xlevels$RoofMatl, levels(test.imp$RoofMatl))
 lr.model.imp$xlevels$Functional <- union(lr.model.imp$xlevels$Functional, levels(test.imp$Functional))
 lr.model.imp$xlevels$BsmtCond <- union(lr.model.imp$xlevels$BsmtCond, levels(test.imp$BsmtCond))
 lr.model.imp$xlevels$Heating <- union(lr.model.imp$xlevels$Heating, levels(test.imp$Heating))
-lr.model.imp$xlevels$Electrical <- union(lr.model.imp$xlevels$Electrical, levels(test.imp$Electrical))
 lr.model.imp$xlevels$MiscFeature <- union(lr.model.imp$xlevels$MiscFeature, levels(test.imp$MiscFeature))
-lr.model.imp$xlevels$ExterCond <- union(lr.model.imp$xlevels$ExterCond, levels(test.imp$ExterCond))
-lr.model.imp$xlevels$Neighborhood <- union(lr.model.imp$xlevels$Neighborhood, levels(test.imp$Neighborhood))
-lr.model.imp$xlevels$RoofStyle <- union(lr.model.imp$xlevels$RoofStyle, levels(test.imp$RoofStyle))
-lr.model.imp$xlevels$HeatingQC <- union(lr.model.imp$xlevels$HeatingQC, levels(test.imp$HeatingQC))
 lr.model.imp$xlevels$GarageQual <- union(lr.model.imp$xlevels$GarageQual, levels(test.imp$GarageQual))
 lr.model.imp$xlevels$GarageCond <- union(lr.model.imp$xlevels$GarageCond, levels(test.imp$GarageCond))
 lr.model.imp$xlevels$PoolQC <- union(lr.model.imp$xlevels$PoolQC, levels(test.imp$PoolQC))
-lr.model.imp$xlevels$SaleType <- union(lr.model.imp$xlevels$SaleType, levels(test.imp$SaleType))
 lr.preds.imp <- predict(lr.model.imp,test.imp)
 lr.RMSE.imp <- sqrt(sum((lr.preds.imp-test.imp$SalePrice)^2,na.rm = TRUE))/length(lr.preds.imp)
 p2<-qplot(lr.preds.imp,test.imp$SalePrice[!is.na(lr.preds.imp)])+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Imputed Linear Model Predictions",y="Imputed Sale Price",title=paste("RMSE: ",lr.RMSE.imp))
@@ -455,7 +444,7 @@ p4<-ggplot(fullTrain, aes(x=PoolQC, y = SalePrice))+
 
 grid.arrange(p1,p2,p3,p4,nrow=2,ncol=2)
 
-lr.model.onehot.edit <- lm(SalePrice~.,train.onehot%>%select_if(function(col) sum(col,na.rm=T)>10)%>%select(-PoolQCNone), na.action = na.omit)
+lr.model.onehot.edit <- lm(SalePrice~.,train.onehot%>%select_if(function(col) sum(col,na.rm=T)>15)%>%select(-PoolQCNone), na.action = na.omit)
 lr.preds.onehot.edit <- predict(lr.model.onehot.edit,test.onehot)
 lr.RMSE.onehot.edit <- sqrt(sum((lr.preds.onehot.edit-test.onehot$SalePrice)^2,na.rm=T))/length(lr.preds.onehot.edit)
 p1<-qplot(lr.preds.onehot.edit,test.onehot$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "One-hot Linear Model Predictions",y="One-hot Sale Price ", title=paste('RMSE: ',lr.RMSE.onehot.edit))
@@ -474,27 +463,25 @@ ggplot()+
 
 ```
 
-Forward and backward subset selection was also used to shed some insight on our first research question. Both forward and backward selection selected the house id, overall condition, and garage area as the top 1st, 2nd, and 5th of the top five predictive variables. 	Where they differ is that the forward subset selection seems to select variables concerning the basement of the house, while the backward subset selection seems to select variables relating to the square feet of the house and also the kitchen quality.
+Forward and backward subset selection was also used to shed some insight on our first research question. Both forward and backward selection selected the house id, overall condition, year remodel added, and fair basement quality and garage area as top five predictive variables. 	Where they differ is that the forward subset selection seems to select variables concerning the zoning and basement full baths of the house, while the backward subset selection seems to select variables relating to the square feet of the house.
 
 These selected variables should be taken with a grain of salt because the same non-sparse variable selection process was used as with the linear models, but forward and backward subset selection identify variables that weren't identified as important by any other method. Because there are so many variables, it is too computationally intensive to calculate the best subset selection, but it is likely that forward and backward subset selection with this many variables is identifying a non-optimal solution.
 
 ```{r subset_selection, message=F}
 
-fullTrain %>% group_by(RoofMatl) %>% summarize(n_houses = n(), avg_sale_price = mean(SalePrice), med_sale_price = median(SalePrice))
-
-forward_subset<-regsubsets(SalePrice~.,data = train.onehot%>%select_if(function(col) sum(col,na.rm=T)>10)%>%select(-PoolQCNone),method="forward")
+forward_subset<-regsubsets(SalePrice~.,data = train.onehot%>%select_if(function(col) sum(col,na.rm=T)>15)%>%select(-PoolQCNone),method="forward")
 forward<-names(one_hot_encoded_cc)[summary(forward_subset)$which[5,]]
 
-backward_subset <-regsubsets(SalePrice~.,data = train.onehot%>%select_if(function(col) sum(col,na.rm=T)>10)%>%select(-PoolQCNone),method="backward")
+backward_subset <-regsubsets(SalePrice~.,data = train.onehot%>%select_if(function(col) sum(col,na.rm=T)>15)%>%select(-PoolQCNone),method="backward")
 backward<-names(one_hot_encoded_cc)[summary(backward_subset)$which[5,]]
 
-data.frame("Forward Selected Variables" = names(train.onehot%>%select_if(function(col) sum(col,na.rm=T)>10)%>%select(-PoolQCNone))[summary(forward_subset)$which[5,]], 
-           "Backward Selected Variables" = names(train.onehot%>%select_if(function(col) sum(col,na.rm=T)>10)%>%select(-PoolQCNone))[summary(backward_subset)$which[5,]])
+data.frame("Forward Selected Variables" = names(train.onehot%>%select_if(function(col) sum(col,na.rm=T)>15)%>%select(-PoolQCNone))[summary(forward_subset)$which[5,]], 
+           "Backward Selected Variables" = names(train.onehot%>%select_if(function(col) sum(col,na.rm=T)>15)%>%select(-PoolQCNone))[summary(backward_subset)$which[5,]])
 ```
 
-Below we applied the KNN regression on the SalePrice. The regression is basically fitting the best line to predict the SalePrice between neighbouring houses. We initially assumed 4 values of k: 1,5,19 and 50. Among the 4 values, 1 had the least root mean square error(RMSE). 
+Below we applied the KNN regression on the SalePrice. The regression is basically fitting the best line to predict the SalePrice between neighbouring houses. We initially assumed 4 values of k: 1,5,19 and 50. Among the 4 values, 5 had the least root mean square error(RMSE). 
 
-We went ahead and drew a qplot to illustrate the pattern of k from 1 to 50 and its corresponding RMSE. According to the graph, 1 is the value of k with the least RMSE hence the most accurate in comparison to the others. Above 1, the RMSE gradually increase with the increasing value of k hence overfitting. This can be interpreted to mean that the sale price of each house is closest to that of only the most similar house to it, insinuating that there is a high variance in the data as well as high sparsity in the 306 dimensional space of the one-hot encoded data.
+We went ahead and drew a qplot to illustrate the pattern of k from 1 to 50 and its corresponding RMSE. According to the graph, 4 is the value of k with the least RMSE hence the most accurate in comparison to the others. Above 4, the RMSE gradually increase with the increasing value of k hence overfitting. This can be interpreted to mean that the sale price of each house is closest to that of only the four most similar houses to it, insinuating that there is a high variance in the data as well as high sparsity in the 306 dimensional space of the one-hot encoded data.
 
 # KNN regression
 
