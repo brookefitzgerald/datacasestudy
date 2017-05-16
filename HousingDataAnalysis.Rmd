@@ -2,7 +2,9 @@
 title: "Housing Data Analysis"
 author: "Brooke Fitzgerald, Gloria Giramahoro, Sergi Drago"
 date: "4/2/2017"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 # Introduction
@@ -13,7 +15,8 @@ This data analysis project set out to answer two questions:
 The dataset we set out to analyze was found on the Kaggle Competition: “House Prices: Advanced Regression Techniques.” The original data comes from the Ames City Assessor’s Office in the form of a data dump from their records system. The initial Excel file contained 113 variables describing 3970 property sales that had occurred in this city between 2006 and 2010. This data was obtained by Prof. De Cock (from Truman State University) who removed variables that required special knowledge or previous calculations for their use, leaving us with the 80 variable dataset we have now.
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
 knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
 library(scales)
 library(ggplot2)
@@ -163,6 +166,7 @@ summary(fullTrain)
 ```
 
 Then with some data visualization we find that the sale price of homes has a positively skewed distribution, with the median sale price of a house (\$163,000.00) being significantly less than the average sale price of a house (\$180,921.20).
+
 ```{r visualization}
 options(scipen=5)
 
@@ -177,6 +181,7 @@ ggplot(fullTrain, aes(SalePrice))+
 ```
 
 A boxplot comparing the sale prices for all of the different neighborhoods shows that there are some neighborhoods that clearly have much higher average and median sale prices than others. This indicates that Neighborhood is likely an importat indicator for sale price.
+
 ```{r neighborhoods}
 ordered_names<-fullTrain %>% group_by(Neighborhood)%>%summarize(avg = mean('SalePrice')) %>% arrange(avg)
 ordered_neighborhood_dfm <- data.frame(Neighborhood=factor(fullTrain$Neighborhood,
@@ -191,6 +196,7 @@ ggplot(ordered_neighborhood_dfm, aes(x=Neighborhood,y=SalePrice))+
 ```
 
 We also wanted to see if which month a house was purchased in has any effect on the sale price of the house. Based on the plots of the number of sales per month, colored by the mean and median sale price for each month, it seems like house sale prices are lower and more frequent as the summer starts (April, May), but that buying a house in September is going to be much more expensive then during other months.
+
 ```{r month_sold}
 p1<-fullTrain %>% group_by(MoSold) %>% summarize(NumSold=n(),MeanSalePrice=mean(SalePrice))%>%
   ggplot(aes(x=MoSold,y=NumSold, fill=MeanSalePrice))+
@@ -206,6 +212,7 @@ grid.arrange(p1,p2,nrow=2)
 ```
 
 In the plots of sale price and the year built (YearBuilt), overall house quality (OverallQual), total number of rooms above ground (TotRmsAbvGrd), and above grade living area square feet (GrLivArea), it becomes clear that these three variables are positively correlated with sale price. 
+
 ```{r scatter_plots}
 p1<-ggplot(fullTrain, aes(x=YearBuilt,y=SalePrice))+
        geom_point(alpha = 0.4)+
@@ -225,6 +232,7 @@ p4<-ggplot(fullTrain, aes(x = GrLivArea, y=SalePrice))+
 grid.arrange(p1,p2,p3,p4,nrow=2)
 
 ```
+
 Because year built, overall house quality, total number of rooms above ground, and above grade living area square feet seemed correlated with SalePrice, we wanted to definitively test said correlation and see if there are other variables that are highly correlated with SalePrice.
 
 However, since correlation requires numeric variables, and since many of our variables are factors, we decided to use a technique known as one hot variable encoding. With this technique, each variable with $n$ factors is expanded into $n$ variables that take the value 1 if the data has that factor and 0 otherwise. 
@@ -232,6 +240,7 @@ However, since correlation requires numeric variables, and since many of our var
 For example, the variable Street with its two possible factors 'Gravl' and 'Pave' becomes two variables: StreetGravl and StreetPave that are either 0 or 1. 
 
 With this new encoding we calculated the correlation and then plotted the variables with absolute correlation values larger than 0.5.
+
 ```{r correlation}
 one_hot_encoded<- dummy.data.frame(fullTrain)
 names(one_hot_encoded)<-make.names(names(one_hot_encoded))
@@ -252,7 +261,7 @@ ggplot()+
 ## Removing NA values
 Because some predictive models don't allow for NA values, we want to do some data imputation. The data was imputed using random forests. This imputed data can be used in conjunction with the one-hot encoded data to compare and contrast the various predictions.
 
-```{r imputation, echo=F}
+```{r imputation, include=F}
 imp <- mice(fullTrain,method='rf')
 imputed <- fullTrain
 
@@ -277,6 +286,7 @@ for(varName in imp$imp){
 }
 
 ```
+
 ## Starting Predictive Modeling
 The first step in predictive modeling is splitting the data into training and test sets.
 
@@ -317,24 +327,20 @@ When you look at the box plots comparing the two splits, the neighborhood split 
 tree.model.full <-rpart(SalePrice~.,train.full)
 tree.preds.full <- predict(tree.model.full, test.full)
 tree.RMSE.full <- sqrt(sum((tree.preds.full-test.full$SalePrice)^2))/length(tree.preds.full)
-tree.RMSE.full
 p1<-qplot(tree.preds.full,test.full$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = paste("Full Regression Tree RMSE: ",tree.RMSE.full),y="Sale Price ")
 
 tree.model.onehot <-rpart(SalePrice~.,train.onehot)
 tree.preds.onehot <- predict(tree.model.onehot, test.onehot)
 tree.RMSE.onehot <- sqrt(sum((tree.preds.onehot-test.onehot$SalePrice)^2))/length(tree.preds.onehot)
-tree.RMSE.onehot
 p2<-qplot(tree.preds.onehot,test.onehot$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = paste("One-hot Regression Tree RMSE: ",tree.RMSE.onehot),y="Sale Price ")
 
 tree.model.imp <- rpart(SalePrice~.,train.imp)
 tree.preds.imp <- predict(tree.model.imp, test.imp)
 tree.RMSE.imp <- sqrt(sum((tree.preds.imp-test.imp$SalePrice)^2))/length(tree.preds.imp)
-tree.RMSE.imp
 p3<-qplot(tree.preds.imp,test.imp$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = paste("Imputed Regression Tree RMSE: ",tree.RMSE.imp),y="Sale Price ")
 
 tree.preds.avg <- rowMeans(cbind(tree.preds.full,tree.preds.onehot,tree.preds.imp))
 tree.RMSE.avg <- sqrt(sum((tree.preds.avg-test.full$SalePrice)^2))/length(tree.preds.avg)
-tree.RMSE.avg
 p4<-qplot(tree.preds.avg,test.full$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = paste("Average Regression Tree RMSE: ",tree.RMSE.avg),y="Sale Price ")
 
 grid.arrange(p1,p2,p3,p4,ncol=2,nrow=2)
@@ -382,10 +388,12 @@ lr.model.full$xlevels$Functional <- union(lr.model.full$xlevels$Functional, leve
 lr.model.full$xlevels$SaleType <- union(lr.model.full$xlevels$SaleType, levels(test.full$SaleType))
 lr.model.full$xlevels$HeatingQC <- union(lr.model.full$xlevels$HeatingQC, levels(test.full$HeatingQC))
 lr.model.full$xlevels$GarageQual <- union(lr.model.full$xlevels$GarageQual, levels(test.full$GarageQual))
+lr.model.full$xlevels$MiscFeature <- union(lr.model.full$xlevels$MiscFeature, levels(test.full$MiscFeature))
 lr.model.full$xlevels$GarageCond <- union(lr.model.full$xlevels$GarageCond, levels(test.full$GarageCond))
+lr.model.full$xlevels$PoolQC <- union(lr.model.full$xlevels$PoolQC, levels(test.full$PoolQC))
 lr.preds.full <- predict(lr.model.full,test.full)
 lr.RMSE.full <- sqrt(sum((lr.preds.full-test.full$SalePrice)^2,na.rm=TRUE))/length(lr.preds.full)
-qplot(lr.preds.full,test.full$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Full Linear Model Predictions",y="Full Sale Price",title=paste("RMSE: ",lr.RMSE.full))
+p1<-qplot(lr.preds.full,test.full$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Full Linear Model Predictions",y="Full Sale Price",title=paste("RMSE: ",lr.RMSE.full))
 
 lr.model.imp <- lm(SalePrice~.,train.imp)
 lr.model.imp$xlevels$Condition2 <- union(lr.model.imp$xlevels$Condition2, levels(test.imp$Condition2))
@@ -403,17 +411,20 @@ lr.model.imp$xlevels$RoofStyle <- union(lr.model.imp$xlevels$RoofStyle, levels(t
 lr.model.imp$xlevels$HeatingQC <- union(lr.model.imp$xlevels$HeatingQC, levels(test.imp$HeatingQC))
 lr.model.imp$xlevels$GarageQual <- union(lr.model.imp$xlevels$GarageQual, levels(test.imp$GarageQual))
 lr.model.imp$xlevels$GarageCond <- union(lr.model.imp$xlevels$GarageCond, levels(test.imp$GarageCond))
+lr.model.imp$xlevels$PoolQC <- union(lr.model.imp$xlevels$PoolQC, levels(test.imp$PoolQC))
 lr.model.imp$xlevels$SaleType <- union(lr.model.imp$xlevels$SaleType, levels(test.imp$SaleType))
 lr.preds.imp <- predict(lr.model.imp,test.imp)
 lr.RMSE.imp <- sqrt(sum((lr.preds.imp-test.imp$SalePrice)^2,na.rm = TRUE))/length(lr.preds.imp)
-qplot(lr.preds.imp,test.imp$SalePrice[!is.na(lr.preds.imp)])+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Imputed Linear Model Predictions",y="Imputed Sale Price",title=paste("RMSE: ",lr.RMSE.imp))
+p2<-qplot(lr.preds.imp,test.imp$SalePrice[!is.na(lr.preds.imp)])+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "Imputed Linear Model Predictions",y="Imputed Sale Price",title=paste("RMSE: ",lr.RMSE.imp))
 
 lr.model.onehot <- lm(SalePrice~.,train.onehot, na.action = na.omit)
 lr.preds.onehot <- predict(lr.model.onehot,test.onehot)
 lr.RMSE.onehot <- sqrt(sum((lr.preds.onehot-test.onehot$SalePrice)^2,na.rm=T))/length(lr.preds.onehot)
-qplot(lr.preds.onehot,test.onehot$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "One-hot Linear Model Predictions",y="One-hot Sale Price ", title=paste('RMSE: ',lr.RMSE.onehot))
+p3<-qplot(lr.preds.onehot,test.onehot$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "One-hot Linear Model Predictions",y="One-hot Sale Price ", title=paste('RMSE: ',lr.RMSE.onehot))
 
-plot(lr.model.onehot$residuals)
+p4<-qplot(lr.model.onehot$residuals)+theme_few()+labs(x = "Index",y="Residuals",title="Linear Model Residuals")
+grid.arrange(p1,p2,p3,p4,ncol=2)
+
 significant_vars<-rownames(data.frame(summary(lr.model.onehot)$coef[summary(lr.model.onehot)$coef[,4] <= .01, 4]))
 sig_coefficients<-lr.model.onehot$coefficients[significant_vars]
 
@@ -445,17 +456,18 @@ grid.arrange(p1,p2,p3,p4,nrow=2,ncol=2)
 lr.model.onehot.edit <- lm(SalePrice~.,train.onehot%>%select_if(function(col) sum(col,na.rm=T)>10)%>%select(-PoolQCNone), na.action = na.omit)
 lr.preds.onehot.edit <- predict(lr.model.onehot.edit,test.onehot)
 lr.RMSE.onehot.edit <- sqrt(sum((lr.preds.onehot.edit-test.onehot$SalePrice)^2,na.rm=T))/length(lr.preds.onehot.edit)
-lr.RMSE.onehot.edit
-qplot(lr.preds.onehot.edit,test.onehot$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "One-hot Linear Model Predictions",y="One-hot Sale Price ", title=paste('RMSE: ',lr.RMSE.onehot.edit))
+p1<-qplot(lr.preds.onehot.edit,test.onehot$SalePrice)+theme_few()+geom_abline(slope=1,intercept=0)+labs(x = "One-hot Linear Model Predictions",y="One-hot Sale Price ", title=paste('RMSE: ',lr.RMSE.onehot.edit))
 
-plot(lr.model.onehot.edit$residuals)
+p2<-qplot(lr.model.onehot.edit$residuals)+theme_few()+labs(x = "Index",y="Residuals",title="Non-Sparse Linear Model Residuals")
+
+grid.arrange(p1,p2,ncol=2)
 significant_vars<-rownames(data.frame(summary(lr.model.onehot.edit)$coef[summary(lr.model.onehot.edit)$coef[,4] <= .01, 4]))
 sig_coefficients<-lr.model.onehot.edit$coefficients[significant_vars]
 
 ggplot()+
   geom_bar(aes(x=reorder(names(sig_coefficients), -sig_coefficients),sig_coefficients),stat="identity")+
   theme_few()+
-  labs(title = "Significant p<0.01 One-Hot Encoded Non-Sparse Variable Coefficients",y="Linear Model Coefficients", x = "Variable")+
+  labs(title = "Significant p<0.01 One-Hot Coefficients",y="Linear Model Coefficients", x = "Non-Sparse Variables")+
   coord_flip()
 
 ```
@@ -464,7 +476,7 @@ Forward and backward subset selection was also used to shed some insight on our 
 
 These selected variables should be taken with a grain of salt because the same non-sparse variable selection process was used as with the linear models, but forward and backward subset selection identify variables that weren't identified as important by any other method. Because there are so many variables, it is too computationally intensive to calculate the best subset selection, but it is likely that forward and backward subset selection with this many variables is identifying a non-optimal solution.
 
-```{r subset_selection}
+```{r subset_selection, message=F}
 
 fullTrain %>% group_by(RoofMatl) %>% summarize(n_houses = n(), avg_sale_price = mean(SalePrice), med_sale_price = median(SalePrice))
 
@@ -474,57 +486,36 @@ forward<-names(one_hot_encoded_cc)[summary(forward_subset)$which[5,]]
 backward_subset <-regsubsets(SalePrice~.,data = train.onehot%>%select_if(function(col) sum(col,na.rm=T)>10)%>%select(-PoolQCNone),method="backward")
 backward<-names(one_hot_encoded_cc)[summary(backward_subset)$which[5,]]
 
-data.frame("Variable Importance Rank"=1:6,
-           "Forward Selected Variables" = names(train.onehot%>%select_if(function(col) sum(col,na.rm=T)>10)%>%select(-PoolQCNone))[summary(forward_subset)$which[5,]], 
+data.frame("Forward Selected Variables" = names(train.onehot%>%select_if(function(col) sum(col,na.rm=T)>10)%>%select(-PoolQCNone))[summary(forward_subset)$which[5,]], 
            "Backward Selected Variables" = names(train.onehot%>%select_if(function(col) sum(col,na.rm=T)>10)%>%select(-PoolQCNone))[summary(backward_subset)$which[5,]])
 ```
 
-<<<<<<< HEAD
-Below we applied the Bagging regression of Salesprice: nbagg =25(bootstrap replications i.e samples to replicate.)Bagging regression also known as  (bootstrap aggregating) was introduced by Breiman (1 996a) to reduce the variance of a predictor( Buhlmann & Yu,2002) In our case applying the Bagging regression on the predictor sale price will reduce its variance and improve its mean squared error. after applying the bagging regression, the Out-of-bag estimate of root mean squared error is 36260.96, the mean is 180827and there have been 25 samples which were replicated
+Below we applied the KNN regression on the SalePrice. The regression is basically fitting the best line to predict the SalePrice between neighbouring houses. we assumed 4 values of k which are 3,5,19 and 50. Among the 4 values, 3 had the least root mean square error(RMSE). 
 
+We went ahead and drew a qplot to illustrate the pattern of k from 1 to 50 and its corresponding RMSE. According to the graph, 1 is the value of k with the least RMSE hence the most accurate in comparison to the others. Above 1,The RMSE gradually increase with the increasing value of k hence overfitting.
 
-=======
-Below we applied the KNN regression on the SalePrice. The regression is basically fitting the best line to predict the SalePrice between neighbouring houses. we assumed 4 values of k which are 3,5,19 and 50. Among the 4 values,3 had the least root mean square error(RMSE). 
-
-We went ahead and drew a qplot to illustrate the pattern of k from 1 to 50 and its corresponding RMSE. According to the graph, 6 is the value of k with the least RMSE hence the most accurate in comparison to the others.Above 6,The RMSE gradually increase with the increasing value of k hence overfitting.
->>>>>>> origin/master
 # KNN regression
+
 ```{r}
-fullTrain_knn3<-knnreg(train.onehot.cc[-306],train.onehot.cc$SalePrice, k=3);
-summary(fullTrain_knn3)
-#plot(test.onehot.cc$SalePrice,predict(fullTrain_knn3,test.onehot.cc[-306]))
+fullTrain_knn3<-knnreg(train.onehot.cc[-306],train.onehot.cc$SalePrice, k=3)
 knn.3.preds<-predict(fullTrain_knn3,test.onehot.cc[-306])
 knn.3.RMSE<-sqrt(sum((knn.3.preds-test.onehot.cc$SalePrice)^2))/length(test.onehot.cc)
-knn.3.RMSE
 
 #using k =5
 fullTrain_knn5<-knnreg(train.onehot.cc[-306],train.onehot.cc$SalePrice, k=5);
-summary(fullTrain_knn5)
 knn.5.preds<-predict(fullTrain_knn5,test.onehot.cc[-306])
 knn.5.RMSE<-sqrt(sum((knn.5.preds-test.onehot.cc$SalePrice)^2))/length(test.onehot.cc)
-knn.5.RMSE
-  
-sd(test.onehot.cc$SalePrice,predict(fullTrain_knn5,test.onehot.cc[-306]))
-print(predict(fullTrain_knn5,test.onehot.cc[-306]))
-plot(test.onehot.cc$SalePrice,predict(fullTrain_knn5,test.onehot.cc[-306]))
 
 #using k =19
 fullTrain_knn19<-knnreg(train.onehot.cc[-306],train.onehot.cc$SalePrice, k=20);
 knn.19.preds <-predict(fullTrain_knn19,test.onehot.cc[-306])
-knn.19.preds<-predict(fullTrain_knn19,test.onehot.cc[-306])
 knn.19.RMSE<-sqrt(sum((knn.19.preds-test.onehot.cc$SalePrice)^2))/length(test.onehot.cc)
-knn.19.RMSE
 
-summary(test.onehot.cc$SalePrice,predict(fullTrain_knn19,test.onehot.cc[-306]))
-sd(test.onehot.cc$SalePrice,predict(fullTrain_knn19,test.onehot.cc[-306]))
-plot(test.onehot.cc$SalePrice,predict(fullTrain_knn19,test.onehot.cc[-306]))
 
 #using k =50
 fullTrain_knn50<-knnreg(train.onehot.cc[-306],train.onehot.cc$SalePrice, k=50);
 knn.50.preds <-predict(fullTrain_knn50,test.onehot.cc[-306])
-knn.50.preds<-predict(fullTrain_knn50,test.onehot.cc[-306])
 knn.50.RMSE<-sqrt(sum((knn.50.preds-test.onehot.cc$SalePrice)^2))/length(test.onehot.cc)
-knn.50.RMSE
 
 p1<-qplot(test.onehot.cc$SalePrice,knn.3.preds)+theme_few()+geom_abline(slope = 1, intercept = 0) + labs(x="Actual Sale Price",y="Predictions, k=3",title=paste("RMSE: ",knn.3.RMSE))
 p2<-qplot(test.onehot.cc$SalePrice,knn.5.preds)+theme_few()+geom_abline(slope = 1, intercept = 0) + labs(x="Actual Sale Price",y="Predictions, k=5",title=paste("RMSE: ",knn.5.RMSE))
@@ -539,35 +530,10 @@ for (i in 1:50){
   knn.preds<-predict(knn.model,test.onehot.cc[-306])
   RMSES[i]<-sqrt(sum((knn.preds-test.onehot.cc$SalePrice)^2))/length(test.onehot.cc)
 }
+
 qplot(1:50,RMSES)+theme_few()+labs(title = paste("Minimum RMSE at: ",which.min(RMSES)),x="k",y="RMSE")
-```
-
-We applied hierarchical clustering in order to classify our data into 5 clusters. This contributes to a part of the answer to our research question "Are there intrinsic groupings/clusters of houses present in the data and what do these clusters represent? The clusters are formed basing on the fact that houses with similar features are within the same range of Sale Price.
-
-"we classified the clusters in 5 groups. The 5 groups represent a range of sale prices in which the dataset fall. The 4th group being the most expensive costing within the range between 300000(3e+05) to 400000(4e+05) with outliers that go beyond 600000(6e+05) while the cheapest group  is the 5th group ranging from 100000(1e+05) but less than 200000(2e+05). Moreover we checked the overall quality compared to the price and the 4th group having the highest quality ranging within 7 up to 10 while the 5th group had the lowest quality ranging within 2 up to 6 with a few outliers which have 7.
-
-Moreover, we checked as well the relationship between GrLivArea(Above grade (ground) living area square feet) and the sales price , we found that the 4th group's Gridliv area ranged between 1500 to 3500 with some outliers reaching to 4000 while the 5th group ranged between 500 to 2500. Interestingly,the second group's Gridliv area ranges between 1000 till almost 2000 however there are outliers that go beyond 5000.
-```{r}
-par(mar=rep(1, 4))
-d <- dist(one_hot_encoded_cc, method = "euclidean") # distance matrix
-hclust.fit <- hclust(d, method = "ward.D")
-plot(hclust.fit) # display dendogram
-hclust.groups <- cutree(hclust.fit, k = 5)
-h_clust_data <- one_hot_encoded_cc %>% mutate(h_clust = hclust.groups)
-h_clust_data$h_clust <- factor(h_clust_data$h_clust)
-
-ggplot(h_clust_data, aes(h_clust,SalePrice))+
-  geom_boxplot()+
-  theme_few()
-
-ggplot(h_clust_data, aes(GrLivArea,SalePrice, col=h_clust))+
-  geom_point()+
-  theme_few()
 
 ```
-References
-Peter Buhlmann & Bin Yu,2002,Analyzing Bagging
-
 
 #Random Forests
 
@@ -704,13 +670,9 @@ predict.gbm <- predict(model.gbm, test.full, n.trees = 300)
 
 
 
-RMSE.gbm = round(sqrt(sum((predict-test.full$SalePrice)^2))/length(predict.gbm),2)  
-plot.gbm <- predict-test.full$SalePrice
+RMSE.gbm = round(sqrt(sum((predict.gbm-test.full$SalePrice)^2))/length(predict.gbm),2)  
 
-
-plot_gbm = ggplot(data = as.data.frame(cbind("Target" =test.full$SalePrice,"Predicted" = predict)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title= paste("RMSE: ",RMSE.gbm))
-
-plot_gbm
+ggplot(data = as.data.frame(cbind("Target" =test.full$SalePrice,"Predicted" = predict.gbm)), aes(x = Target, y = Predicted)) + geom_point() + geom_abline(slope = 1, intercept = 0) + xlim(0,5e05) + ylim(0, 5e05) + labs(title= paste("RMSE: ",RMSE.gbm))
 ```
 
 
@@ -726,14 +688,32 @@ ggplot(aes(reorder(var,rel.inf),rel.inf))+
 
 ```
 
-
-
 Then we started looking into answering our second research question: Are there natural clusters of houses that can be derived and explained from within the data and what do those clusters correspond to? 
 
-# Gloria's answers to research question 2 hierarchical clustering
+We applied hierarchical clustering in order to classify our data into 5 clusters. This contributes to a part of the answer to our research question "Are there intrinsic groupings/clusters of houses present in the data and what do these clusters represent? The clusters are formed basing on the fact that houses with similar features are within the same range of Sale Price.
 
-# Sergi's answers to research question 2 knn 
+We classified the clusters in 5 groups. The 5 groups represent a range of sale prices in which the dataset fall. The 4th group being the most expensive costing within the range between 300000(3e+05) to 400000(4e+05) with outliers that go beyond 600000(6e+05) while the cheapest group  is the 5th group ranging from 100000(1e+05) but less than 200000(2e+05). Moreover we checked the overall quality compared to the price and the 4th group having the highest quality ranging within 7 up to 10 while the 5th group had the lowest quality ranging within 2 up to 6 with a few outliers which have 7.
 
+Moreover, we checked as well the relationship between GrLivArea(Above grade (ground) living area square feet) and the sales price , we found that the 4th group's Gridliv area ranged between 1500 to 3500 with some outliers reaching to 4000 while the 5th group ranged between 500 to 2500. Interestingly,the second group's Gridliv area ranges between 1000 till almost 2000 however there are outliers that go beyond 5000.
+
+```{r}
+par(mar=rep(1, 4))
+d <- dist(one_hot_encoded_cc, method = "euclidean") # distance matrix
+hclust.fit <- hclust(d, method = "ward.D")
+plot(hclust.fit) # display dendogram
+hclust.groups <- cutree(hclust.fit, k = 5)
+h_clust_data <- one_hot_encoded_cc %>% mutate(h_clust = hclust.groups)
+h_clust_data$h_clust <- factor(h_clust_data$h_clust)
+
+ggplot(h_clust_data, aes(h_clust,SalePrice))+
+  geom_boxplot()+
+  theme_few()
+
+ggplot(h_clust_data, aes(GrLivArea,SalePrice, col=h_clust))+
+  geom_point()+
+  theme_few()
+
+```
 
 Our first approach to answering this question was to do some dimensionality reduction to see if there were any obvious structures in the data.
 
@@ -743,7 +723,7 @@ Sale price seems to almost exactly maps to the first principle component, and th
 
 Furthermore, MSSubClass (the type of dwelling involved in the sale) also has an interesting relationship with principal component 2. The MSSubClasses 120, 160, and 180 form a cluster in the higher values of the second principal component. MSSubClasses 120, 160, and 180 are the 3 types of dwellings that are planned unit developments - communities of homes that are operated by a homeowners association to provide amenities like parks, playgrounds, pools, tennis and basketball courts, hiking trails, private gated common land and street lights or the like.
 
-```{r pca}
+```{r pca, message=F}
 numeric_columns_only <- fullTrain %>% select_if(is.numeric)
 numeric_full_columns_only <- numeric_columns_only[complete.cases(numeric_columns_only),]
 
